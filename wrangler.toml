@@ -1,0 +1,17 @@
+name = "claude-leaderboard"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "claude-leaderboard-db"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+
+[vars]
+GOOGLE_CLIENT_ID = ""
+ADMIN_EMAIL = ""
+
+# Set these via `wrangler secret put`:
+# wrangler secret put GOOGLE_CLIENT_SECRET
+# wrangler secret put SESSION_SECRET
