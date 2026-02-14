@@ -88,7 +88,10 @@ function layout(title: string, content: string, user: User | null = null): strin
           <a href="/" class="text-lg font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
             Claude Leaderboard
           </a>
-          <a href="/leaderboard" class="text-sm text-gray-300 hover:text-white transition">Leaderboard</a>
+          <div class="flex items-center gap-6">
+            <a href="/leaderboard" class="text-sm text-gray-300 hover:text-white transition">Leaderboard</a>
+            <a href="/login" class="text-sm bg-purple-600 hover:bg-purple-500 text-white px-4 py-1.5 rounded-lg transition">Sign In</a>
+          </div>
         </div>
       </nav>`;
 
@@ -108,8 +111,8 @@ function layout(title: string, content: string, user: User | null = null): strin
   <meta name="twitter:title" content="${escapeHtml(title)} - Claude Leaderboard by Akash">
   <meta name="twitter:description" content="Track and compare your Claude Code usage. Upload ccusage reports and see where you rank.">
   <meta property="og:site_name" content="Claude Leaderboard by Akash">
-  <meta property="og:url" content="https://claude-leaderboard.akash.wiki/">
-  <link rel="canonical" href="https://claude-leaderboard.akash.wiki/">
+  <meta property="og:url" content="https://ccrank.dev/">
+  <link rel="canonical" href="https://ccrank.dev/">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f3c6;</text></svg>">
   <script type="application/ld+json">
   {
@@ -117,7 +120,7 @@ function layout(title: string, content: string, user: User | null = null): strin
     "@type": "WebApplication",
     "name": "Claude Leaderboard",
     "description": "Track and compare your Claude Code usage. Upload ccusage reports and compete on the leaderboard.",
-    "url": "https://claude-leaderboard.akash.wiki/",
+    "url": "https://ccrank.dev/",
     "applicationCategory": "DeveloperApplication",
     "creator": {
       "@type": "Person",
@@ -182,11 +185,44 @@ function layout(title: string, content: string, user: User | null = null): strin
 </html>`;
 }
 
-export function landingPage(): string {
+export function landingPage(topEntries: LeaderboardEntry[]): string {
+  const podiumHtml = topEntries.length > 0
+    ? topEntries.map((e) => {
+        const title = getTitle(e.total_cost);
+        const medal = e.rank === 1 ? '&#x1f947;' : e.rank === 2 ? '&#x1f948;' : '&#x1f949;';
+        const ringColor = e.rank === 1 ? 'ring-yellow-400' : e.rank === 2 ? 'ring-gray-400' : 'ring-amber-600';
+        const bgClass = `rank-${e.rank}`;
+        return `<div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center ${bgClass} glow">
+          <div class="text-2xl mb-3">${medal}</div>
+          <div class="mb-3">
+            ${e.avatar_url ? `<img src="${escapeHtml(e.avatar_url)}" class="w-14 h-14 rounded-full mx-auto ring-2 ${ringColor}" alt="">` : `<div class="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center text-xl font-bold mx-auto ring-2 ${ringColor}">${escapeHtml(e.display_name.charAt(0))}</div>`}
+          </div>
+          <div class="font-semibold text-lg mb-1">${escapeHtml(e.display_name)}</div>
+          <div class="text-xs mb-3" style="color:${title.color}">${title.label}</div>
+          <div class="text-2xl font-bold text-purple-400 mb-1">${formatCost(e.total_cost)}</div>
+          <div class="text-xs text-gray-500">${formatTokens(e.total_tokens)} tokens &middot; ${e.days_active}d active</div>
+        </div>`;
+      }).join('')
+    : '';
+
+  const podiumSection = topEntries.length > 0
+    ? `<div class="mb-12">
+        <h2 class="text-lg font-semibold text-gray-300 text-center mb-6">Top Claude Users</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+          ${podiumHtml}
+        </div>
+      </div>`
+    : `<div class="mb-12 text-center">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 max-w-md mx-auto">
+          <p class="text-gray-400 mb-2">No data yet</p>
+          <p class="text-sm text-gray-500">Be the first to upload a ccusage report!</p>
+        </div>
+      </div>`;
+
   return layout(
     'Welcome',
     `<div class="flex flex-col items-center justify-center min-h-[70vh] text-center">
-      <div class="mb-8">
+      <div class="mb-10">
         <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
           Claude Leaderboard
         </h1>
@@ -196,8 +232,27 @@ export function landingPage(): string {
         </p>
       </div>
 
+      ${podiumSection}
+
+      <div class="flex flex-col sm:flex-row items-center gap-4">
+        <a href="/login" class="bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg px-8 py-3 transition text-sm">
+          Sign in &amp; Upload Your Stats
+        </a>
+        <a href="/leaderboard" class="bg-gray-800 hover:bg-gray-700 text-white font-medium rounded-lg px-8 py-3 transition text-sm">
+          View Full Leaderboard &rarr;
+        </a>
+      </div>
+    </div>`
+  );
+}
+
+export function loginPage(): string {
+  return layout(
+    'Sign In',
+    `<div class="flex flex-col items-center justify-center min-h-[60vh]">
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 w-full max-w-md glow">
-        <h2 class="text-lg font-semibold mb-6">Sign in or join</h2>
+        <h1 class="text-2xl font-bold mb-2 text-center">Sign in or join</h1>
+        <p class="text-sm text-gray-400 text-center mb-8">Upload your ccusage reports and compete on the leaderboard.</p>
 
         <div class="mb-6">
           <label class="block text-sm text-gray-400 mb-2">Have an invite code?</label>
@@ -219,11 +274,7 @@ export function landingPage(): string {
         </button>
       </div>
 
-      <div class="mt-8">
-        <a href="/leaderboard" class="text-sm text-purple-400 hover:text-purple-300 transition">
-          View the leaderboard &rarr;
-        </a>
-      </div>
+      <a href="/" class="mt-6 text-sm text-gray-500 hover:text-gray-300 transition">&larr; Back to home</a>
     </div>
 
     <script>

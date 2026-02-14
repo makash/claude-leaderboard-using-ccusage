@@ -14,6 +14,7 @@ import {
 import { parseReport } from './parser';
 import {
   landingPage,
+  loginPage,
   dashboardPage,
   leaderboardPage,
   uploadPage,
@@ -93,10 +94,45 @@ function getBaseUrl(c: any): string {
 
 // ─── Pages ──────────────────────────────────────────────────────────────────────
 
+app.get('/login', (c) => {
+  const user = c.get('user');
+  if (user) return c.redirect('/');
+  return c.html(loginPage());
+});
+
 app.get('/', async (c) => {
   const user = c.get('user');
   if (!user) {
-    return c.html(landingPage());
+    // Fetch top 3 for the landing page
+    const top3 = await c.env.DB.prepare(
+      `SELECT
+        u.display_name,
+        u.avatar_url,
+        COALESCE(SUM(d.cost_usd), 0) as total_cost,
+        COALESCE(SUM(d.total_tokens), 0) as total_tokens,
+        COALESCE(SUM(d.output_tokens), 0) as total_output_tokens,
+        COUNT(DISTINCT d.date) as days_active,
+        MAX(d.date) as last_active
+      FROM users u
+      LEFT JOIN daily_usage d ON u.id = d.user_id
+      GROUP BY u.id
+      HAVING total_cost > 0
+      ORDER BY total_cost DESC
+      LIMIT 3`
+    ).all();
+
+    const entries = (top3.results || []).map((row: any, i: number) => ({
+      rank: i + 1,
+      display_name: row.display_name,
+      avatar_url: row.avatar_url,
+      total_cost: row.total_cost,
+      total_tokens: row.total_tokens,
+      total_output_tokens: row.total_output_tokens,
+      days_active: row.days_active,
+      last_active: row.last_active,
+    }));
+
+    return c.html(landingPage(entries));
   }
 
   // Get user stats

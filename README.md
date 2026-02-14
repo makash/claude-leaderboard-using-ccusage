@@ -6,7 +6,7 @@ Claude Leaderboard is an open-source, self-hosted app that lets teams track and 
 
 Deploy it for your team in under 10 minutes on Cloudflare Workers (free tier).
 
-**Live demo:** [claude-leaderboard.k5e.workers.dev](https://claude-leaderboard.k5e.workers.dev)
+**Live demo:** [ccrank.dev](https://ccrank.dev)
 
 ---
 
