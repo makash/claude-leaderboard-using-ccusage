@@ -1,29 +1,57 @@
 # Claude Leaderboard
 
-Track and compare Claude Code usage across your team. Users upload their [ccusage](https://github.com/ryoppippi/ccusage) reports and compete on a leaderboard.
+**Who on your team burns the most Claude tokens?** Find out.
 
-Built on Cloudflare Workers with D1, Google OAuth, and invite-only registration.
+Claude Leaderboard is an open-source, self-hosted app that lets teams track and compare their [Claude Code](https://claude.ai) usage. Users upload [ccusage](https://github.com/ryoppippi/ccusage) reports and compete on a live leaderboard — ranked by cost, tokens, and activity.
+
+Deploy it for your team in under 10 minutes on Cloudflare Workers (free tier).
+
+**Live demo:** [claude-leaderboard.k5e.workers.dev](https://claude-leaderboard.k5e.workers.dev)
+
+---
+
+## Why run this for your team?
+
+If your team uses Claude Code, you probably have no idea who's using it the most, how much it's costing, or whether people are actually getting value from it.
+
+Claude Leaderboard gives you:
+
+- **Visibility** — See who's using Claude, how much, and how often
+- **Friendly competition** — Gamified titles (Apprentice → Token Whale → Claude Maximalist) drive adoption
+- **Cost awareness** — Everyone sees the dollar amount, which naturally encourages thoughtful usage
+- **Team bonding** — "How are you at $500 already?!" is a great conversation starter
+
+It takes 10 minutes to deploy and costs nothing to run on Cloudflare's free tier.
+
+---
 
 ## Features
 
-- **Leaderboard** — Ranks users by total cost, tokens, output tokens, and days active
-- **ccusage parsing** — Supports `daily`, `weekly`, and `session` report formats
-- **Google Sign-In** — OAuth 2.0 social login
-- **Invite-only** — Users need an invite code to register; registered users get 3 invite codes to share
+- **Live leaderboard** — Ranked by total cost, with token counts, days active, and last activity
+- **Gamified titles** — Users earn titles based on spend: Apprentice, Practitioner, Power User, Token Whale, Claude Maximalist
+- **ccusage support** — Parses `daily`, `weekly`, and `session` report formats
+- **Google Sign-In** — OAuth 2.0, no passwords to manage
+- **Invite-only registration** — Control who joins with invite codes; each user gets 3 to share
 - **Admin panel** — Bulk-generate invite codes, view platform stats
-- **Upsert uploads** — Re-uploading safely updates existing dates without duplicating
+- **Safe re-uploads** — Uploading again updates existing dates without duplicating
+- **Dark themed UI** — Looks great, works on mobile
+- **Zero cost hosting** — Runs entirely on Cloudflare Workers free tier with D1 database
 
-## Prerequisites
+---
+
+## Quick Start
+
+### Prerequisites
 
 - [Node.js](https://nodejs.org) v18+
-- A [Cloudflare](https://cloudflare.com) account
+- A [Cloudflare](https://cloudflare.com) account (free tier works)
 - A [Google Cloud](https://console.cloud.google.com) project for OAuth credentials
 
-## Setup
-
-### 1. Install dependencies
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/makash/claude-leaderboard.git
+cd claude-leaderboard
 npm install
 ```
 
@@ -33,13 +61,13 @@ npm install
 npx wrangler login
 ```
 
-### 3. Create a D1 database
+### 3. Create the D1 database
 
 ```bash
 npx wrangler d1 create claude-leaderboard-db
 ```
 
-Copy the `database_id` from the output and update it in `wrangler.toml`:
+Copy the `database_id` from the output into `wrangler.toml`:
 
 ```toml
 [[d1_databases]]
@@ -63,7 +91,7 @@ npm run db:seed          # seed initial invite codes
    ```
    https://your-worker.your-subdomain.workers.dev/auth/google/callback
    ```
-4. Update `wrangler.toml` with your client ID and admin email:
+4. Update `wrangler.toml`:
    ```toml
    [vars]
    GOOGLE_CLIENT_ID = "your-client-id.apps.googleusercontent.com"
@@ -74,13 +102,40 @@ npm run db:seed          # seed initial invite codes
    npx wrangler secret put GOOGLE_CLIENT_SECRET
    npx wrangler secret put SESSION_SECRET
    ```
-   For `SESSION_SECRET`, use any random string (e.g. `openssl rand -hex 32`).
+   For `SESSION_SECRET`, use any random string (`openssl rand -hex 32`).
 
 ### 6. Deploy
 
 ```bash
 npm run deploy
 ```
+
+That's it. Share the URL with your team and start competing.
+
+---
+
+## How to use
+
+### Generate your report
+
+```bash
+npx ccusage@latest daily --json > report.json
+```
+
+### Upload it
+
+1. Sign in at your leaderboard URL
+2. Go to **Upload**
+3. Upload the `report.json` file or paste the JSON
+4. Check the leaderboard
+
+Re-uploading is safe — existing dates get updated, new dates get added.
+
+### Invite your team
+
+After signing up, you get 3 invite codes to share. Go to **Invites** to generate and copy them. Admins can generate bulk codes from the admin panel.
+
+---
 
 ## Local Development
 
@@ -101,62 +156,56 @@ EOF
 npm run dev
 ```
 
-For local development, add `http://localhost:8787/auth/google/callback` as an authorized redirect URI in Google Cloud Console.
+Add `http://localhost:8787/auth/google/callback` as an authorized redirect URI in Google Cloud Console for local development.
 
-## Usage
-
-### Generating a ccusage report
-
-```bash
-npx ccusage@latest daily --json > report.json
-```
-
-### Uploading
-
-1. Sign in at your deployed worker URL
-2. Go to **Upload**
-3. Either upload the `report.json` file or paste the JSON contents
-4. Your data appears on the leaderboard
-
-Re-uploading is safe — existing dates get updated, new dates get added.
-
-### Invite codes
-
-The seed migration creates these initial codes (each usable 10 times):
-
-- `CLAUDE-ALPHA-001`
-- `CLAUDE-ALPHA-002`
-- `CLAUDE-ALPHA-003`
-- `CLAUDE-BETA-001` (5 uses)
-- `CLAUDE-BETA-002` (5 uses)
-
-After registering, each user gets 3 invite codes to generate and share. Admins can generate bulk codes from the admin panel.
+---
 
 ## Project Structure
 
 ```
 src/
-  index.ts      Hono app — all routes (pages + API)
-  auth.ts       HMAC-SHA256 session tokens + Google OAuth
+  index.ts      Hono app — routes, middleware, API
+  auth.ts       HMAC-SHA256 sessions + Google OAuth
   parser.ts     ccusage JSON parser (daily/weekly/session)
-  html.ts       Dark-themed HTML templates with Tailwind CSS
+  html.ts       Dark-themed HTML templates (Tailwind CSS)
 migrations/
   0001_initial.sql       Database schema
   0002_seed_invites.sql  Seed invite codes
 wrangler.toml            Cloudflare Workers config
 ```
 
-## API Endpoints
+## API
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/` | Optional | Landing page or dashboard |
-| `GET` | `/leaderboard` | No | Leaderboard page |
+| `GET` | `/leaderboard` | No | Leaderboard (public) |
 | `GET` | `/upload` | Yes | Upload form |
 | `GET` | `/invites` | Yes | Manage invite codes |
 | `GET` | `/admin` | Admin | Admin panel |
 | `POST` | `/api/upload` | Yes | Upload ccusage JSON |
-| `GET` | `/api/leaderboard` | No | Leaderboard data (JSON) |
+| `GET` | `/api/leaderboard` | No | Leaderboard JSON API |
 | `GET` | `/api/me` | Yes | Current user + stats |
-| `POST` | `/api/invites/create` | Yes | Generate an invite code |
-| `POST` | `/api/admin/invites` | Admin | Bulk-generate invite codes |
+| `POST` | `/api/invites/create` | Yes | Generate invite code |
+| `POST` | `/api/admin/invites` | Admin | Bulk-generate codes |
+
+---
+
+## Tech Stack
+
+- **[Hono](https://hono.dev)** — Lightweight web framework for edge
+- **[Cloudflare Workers](https://workers.cloudflare.com)** — Serverless compute (free tier)
+- **[Cloudflare D1](https://developers.cloudflare.com/d1/)** — SQLite at the edge (free tier)
+- **[Tailwind CSS](https://tailwindcss.com)** — Utility-first styling via CDN
+- **[ccusage](https://github.com/ryoppippi/ccusage)** — Claude Code usage tracking CLI
+
+---
+
+## Built by Akash Mahajan
+
+- [GitHub](https://github.com/makash)
+- [X / Twitter](https://x.com/makash)
+- [LinkedIn](https://www.linkedin.com/in/akashm/)
+- [YouTube](https://www.youtube.com/@makash)
+
+If you deploy this for your team, I'd love to hear about it — [tweet at me](https://x.com/makash)!
