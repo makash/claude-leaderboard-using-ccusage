@@ -110,9 +110,9 @@ function layout(title: string, content: string, user: User | null = null): strin
     .rank-1 { background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05)); border-color: rgba(245,158,11,0.3); }
     .rank-2 { background: linear-gradient(135deg, rgba(156,163,175,0.15), rgba(156,163,175,0.05)); border-color: rgba(156,163,175,0.3); }
     .rank-3 { background: linear-gradient(135deg, rgba(180,83,9,0.15), rgba(180,83,9,0.05)); border-color: rgba(180,83,9,0.3); }
-    .podium-1 { border-top: 3px solid #f59e0b; }
-    .podium-2 { border-top: 3px solid #9ca3af; }
-    .podium-3 { border-top: 3px solid #b45309; }
+    .podium-1 { border-top: 4px solid #f59e0b; border-color: rgba(245,158,11,0.5); }
+    .podium-2 { border-top: 4px solid #9ca3af; border-color: rgba(156,163,175,0.4); }
+    .podium-3 { border-top: 4px solid #b45309; border-color: rgba(180,83,9,0.4); }
   </style>
 </head>
 <body class="min-h-screen">
@@ -153,19 +153,22 @@ export function landingPage(topEntries: LeaderboardEntry[]): string {
   function podiumCard(e: LeaderboardEntry): string {
     const title = getTitle(e.total_cost);
     const isFirst = e.rank === 1;
-    const medal = e.rank === 1 ? '&#x1f947;' : e.rank === 2 ? '&#x1f948;' : '&#x1f949;';
+    const rankLabel = e.rank === 1 ? '#1' : e.rank === 2 ? '#2' : '#3';
+    const rankColor = e.rank === 1 ? 'text-yellow-400' : e.rank === 2 ? 'text-gray-300' : 'text-amber-500';
     const ringColor = e.rank === 1 ? 'ring-yellow-400' : e.rank === 2 ? 'ring-gray-400' : 'ring-amber-600';
     const avatarSize = isFirst ? 'w-20 h-20' : 'w-16 h-16';
     const avatarText = isFirst ? 'text-2xl' : 'text-lg';
+    const avatarRing = isFirst ? 'ring-4' : 'ring-2';
     const costSize = isFirst ? 'text-3xl' : 'text-2xl';
     const padding = isFirst ? 'p-8' : 'p-6';
+    const rankSize = isFirst ? 'text-3xl' : 'text-2xl';
 
     return `<div class="bg-gray-900 border border-gray-800 rounded-xl ${padding} text-center rank-${e.rank} podium-${e.rank} card-hover glow">
-      <div class="text-2xl mb-3">${medal}</div>
+      <div class="${rankSize} font-extrabold ${rankColor} mb-3">${rankLabel}</div>
       <div class="mb-3">
         ${e.avatar_url
-          ? `<img src="${escapeHtml(e.avatar_url)}" class="${avatarSize} rounded-full mx-auto ring-2 ${ringColor}" alt="">`
-          : `<div class="${avatarSize} rounded-full bg-purple-600 flex items-center justify-center ${avatarText} font-bold mx-auto ring-2 ${ringColor}">${escapeHtml(e.display_name.charAt(0))}</div>`}
+          ? `<img src="${escapeHtml(e.avatar_url)}" class="${avatarSize} rounded-full mx-auto ${avatarRing} ${ringColor}" alt="">`
+          : `<div class="${avatarSize} rounded-full bg-purple-600 flex items-center justify-center ${avatarText} font-bold mx-auto ${avatarRing} ${ringColor}">${escapeHtml(e.display_name.charAt(0))}</div>`}
       </div>
       <div class="font-semibold ${isFirst ? 'text-xl' : 'text-lg'} mb-1">${escapeHtml(e.display_name)}</div>
       <div class="text-xs mb-3" style="color:${title.color}">${title.label}</div>
@@ -259,42 +262,68 @@ export function loginPage(): string {
   return layout(
     'Sign In',
     `<div class="flex flex-col items-center justify-center min-h-[60vh]">
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 w-full max-w-md glow">
-        <h1 class="text-2xl font-bold mb-2 text-center">Sign in or join</h1>
-        <p class="text-sm text-gray-400 text-center mb-8">Upload your ccusage reports and compete on the leaderboard.</p>
+      <div class="w-full max-w-md space-y-6">
 
-        <div class="mb-6">
-          <label class="block text-sm text-gray-400 mb-2">Have an invite code?</label>
-          <input
-            type="text"
-            id="invite-code"
-            placeholder="XXXX-XXXX-XXXX"
-            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500 transition uppercase tracking-wider"
+        <!-- Existing user: Sign In -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 glow">
+          <h1 class="text-2xl font-bold mb-2 text-center">Sign In</h1>
+          <p class="text-sm text-gray-400 text-center mb-6">Already have an account? Welcome back.</p>
+          <button
+            onclick="startLogin()"
+            class="w-full bg-white text-gray-900 font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-gray-100 transition flex items-center justify-center gap-2"
           >
-          <p class="text-xs text-gray-500 mt-1">Required for first-time sign up</p>
+            <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Sign in with Google
+          </button>
         </div>
 
-        <button
-          onclick="startLogin()"
-          class="w-full bg-white text-gray-900 font-medium rounded-lg px-4 py-2.5 text-sm hover:bg-gray-100 transition flex items-center justify-center gap-2"
-        >
-          <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-          Sign in with Google
-        </button>
+        <!-- Divider -->
+        <div class="flex items-center gap-3">
+          <div class="h-px bg-gray-800 flex-1"></div>
+          <span class="text-xs text-gray-600 uppercase tracking-wider">New here?</span>
+          <div class="h-px bg-gray-800 flex-1"></div>
+        </div>
+
+        <!-- New user: Join -->
+        <div class="bg-gray-900 border border-purple-800/30 rounded-xl p-8">
+          <h2 class="text-2xl font-bold mb-2 text-center">Join the Leaderboard</h2>
+          <p class="text-sm text-gray-400 text-center mb-6">Enter your invite code to create an account.</p>
+          <div class="mb-4">
+            <input
+              type="text"
+              id="invite-code"
+              placeholder="Enter invite code"
+              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500 transition uppercase tracking-wider text-center"
+            >
+          </div>
+          <button
+            onclick="startJoin()"
+            class="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg px-4 py-2.5 text-sm transition flex items-center justify-center gap-2"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="currentColor" opacity="0.7" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" opacity="0.5" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" opacity="0.6" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Join with Google
+          </button>
+          <p class="text-xs text-gray-600 text-center mt-3">Ask a member for an invite code to get started.</p>
+        </div>
+
       </div>
 
-      <a href="/" class="mt-6 text-sm text-gray-500 hover:text-gray-300 transition">&larr; Back to home</a>
+      <a href="/" class="mt-8 text-sm text-gray-500 hover:text-gray-300 transition">&larr; Back to home</a>
     </div>
 
     <script>
       function startLogin() {
+        window.location.href = '/auth/google';
+      }
+      function startJoin() {
         const invite = document.getElementById('invite-code').value.trim();
+        if (!invite) { document.getElementById('invite-code').focus(); return; }
         const params = new URLSearchParams();
-        if (invite) params.set('invite', invite);
-        window.location.href = '/auth/google' + (invite ? '?' + params : '');
+        params.set('invite', invite);
+        window.location.href = '/auth/google?' + params;
       }
       document.getElementById('invite-code').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') startLogin();
+        if (e.key === 'Enter') startJoin();
       });
     </script>`
   );
@@ -331,14 +360,26 @@ export function dashboardPage(user: User, stats: { total_cost: number; total_tok
       </div>
     </div>
 
-    <div class="flex gap-4">
+    <div class="flex gap-4 mb-8">
       <a href="/upload" class="bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg px-6 py-3 transition">
         Upload Report
       </a>
       <a href="/leaderboard" class="bg-gray-800 hover:bg-gray-700 text-white font-medium rounded-lg px-6 py-3 transition">
         View Leaderboard
       </a>
-    </div>`,
+    </div>
+
+    <!-- Invite nudge -->
+    ${user.invites_remaining > 0 ? `
+    <div class="bg-purple-900/20 border border-purple-800/30 rounded-xl p-5 flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-gray-200">Know someone who uses Claude Code?</p>
+        <p class="text-xs text-gray-400 mt-1">You have <span class="text-purple-400 font-semibold">${user.invites_remaining} invite${user.invites_remaining > 1 ? 's' : ''}</span> to share. The leaderboard is more fun with friends.</p>
+      </div>
+      <a href="/invites" class="flex-shrink-0 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition ml-4">
+        Invite Friends
+      </a>
+    </div>` : ''}`,
     user
   );
 }
@@ -401,7 +442,16 @@ export function leaderboardPage(entries: LeaderboardEntry[], user: User | null =
           </table>
         </div>
       </div>`
-    }`,
+    }
+
+    <!-- Invite nudge on leaderboard -->
+    ${user ? `
+    <div class="mt-8 text-center">
+      <p class="text-sm text-gray-500">Missing someone? <a href="/invites" class="text-purple-400 hover:text-purple-300 transition font-medium">Invite them to the leaderboard</a></p>
+    </div>` : `
+    <div class="mt-8 text-center">
+      <p class="text-sm text-gray-500">Want to join? <a href="/login" class="text-purple-400 hover:text-purple-300 transition font-medium">Sign in with an invite code</a></p>
+    </div>`}`,
     user
   );
 }
@@ -491,6 +541,12 @@ export function uploadPage(user: User, message: { type: 'success' | 'error'; tex
           <li><span class="text-purple-400 font-mono">3.</span> Your data will be parsed and added to the leaderboard</li>
         </ol>
         <p class="text-xs text-gray-500 mt-3">Re-uploading updates existing dates rather than duplicating. You can safely re-upload anytime.</p>
+      </div>
+
+      <!-- Invite nudge on upload page -->
+      <div class="mt-6 bg-gray-900/50 border border-gray-800/50 rounded-xl p-5 text-center">
+        <p class="text-sm text-gray-300 mb-2">The leaderboard is more fun with friends</p>
+        <a href="/invites" class="text-purple-400 hover:text-purple-300 transition text-sm font-medium">Share your invite codes &rarr;</a>
       </div>
     </div>
 
