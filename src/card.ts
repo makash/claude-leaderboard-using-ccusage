@@ -1,21 +1,10 @@
 /**
  * OG image generation for shareable social stats cards.
- * Uses satori (SVG) + @resvg/resvg-wasm (PNG) on Cloudflare Workers.
+ * Uses satori to generate SVG on Cloudflare Workers.
+ * PNG conversion happens client-side via canvas for downloads.
  */
 import satori from 'satori';
-import { initWasm, Resvg } from '@resvg/resvg-wasm';
-// @ts-ignore - wasm import handled by wrangler
-import resvgWasm from '@resvg/resvg-wasm/index_bg.wasm';
 import { getTitle, formatTokens, formatCost } from './utils';
-
-let wasmInitialized = false;
-
-async function ensureWasm() {
-  if (!wasmInitialized) {
-    await initWasm(resvgWasm);
-    wasmInitialized = true;
-  }
-}
 
 // Cache font in module scope
 let fontData: ArrayBuffer | null = null;
@@ -47,8 +36,7 @@ function getRankAccent(rank: number): { color: string; label: string } {
   return { color: '#7c3aed', label: `#${rank}` };
 }
 
-export async function generateCardPng(data: CardData, mode: 'simple' | 'full'): Promise<Uint8Array> {
-  await ensureWasm();
+export async function generateCardSvg(data: CardData, mode: 'simple' | 'full'): Promise<string> {
   const font = await getFont();
   const title = getTitle(data.totalCost);
   const rankInfo = getRankAccent(data.rank);
@@ -80,7 +68,6 @@ export async function generateCardPng(data: CardData, mode: 'simple' | 'full'): 
           marginBottom: 32,
         },
         children: [
-          // Rank badge
           {
             type: 'div',
             props: {
@@ -92,7 +79,6 @@ export async function generateCardPng(data: CardData, mode: 'simple' | 'full'): 
               children: rankInfo.label,
             },
           },
-          // Name + title
           {
             type: 'div',
             props: {
@@ -184,15 +170,11 @@ export async function generateCardPng(data: CardData, mode: 'simple' | 'full'): 
     },
   ];
 
-  // Full mode: add extra info
   if (mode === 'full' && data.lastActive) {
     children.push({
       type: 'div',
       props: {
-        style: {
-          fontSize: 18,
-          color: '#6b7280',
-        },
+        style: { fontSize: 18, color: '#6b7280' },
         children: `Last active: ${data.lastActive}`,
       },
     });
@@ -240,7 +222,7 @@ export async function generateCardPng(data: CardData, mode: 'simple' | 'full'): 
     },
   };
 
-  const svg = await satori(element as any, {
+  return satori(element as any, {
     width: 1200,
     height: 630,
     fonts: [
@@ -252,15 +234,6 @@ export async function generateCardPng(data: CardData, mode: 'simple' | 'full'): 
       },
     ],
   });
-
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: 'width', value: 1200 },
-  });
-  const rendered = resvg.render();
-  const png = rendered.asPng();
-  rendered.free();
-  resvg.free();
-  return png;
 }
 
 function statBox(label: string, value: string) {

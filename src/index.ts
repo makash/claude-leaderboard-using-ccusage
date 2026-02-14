@@ -27,7 +27,7 @@ import {
   errorPage,
 } from './html';
 import { isValidView, isValidDateString, getDateRange, sanitizeSource, slugify, isValidSlug, type ViewType } from './utils';
-import { generateCardPng, type CardData } from './card';
+import { generateCardSvg, type CardData } from './card';
 
 type Bindings = {
   DB: D1Database;
@@ -315,7 +315,7 @@ app.get('/admin', async (c) => {
 
 // ─── Card Routes (public) ────────────────────────────────────────────────────────
 
-app.get('/card/:slug/image.png', async (c) => {
+app.get('/card/:slug/image.svg', async (c) => {
   const slug = c.req.param('slug');
   const user = await c.env.DB.prepare(
     'SELECT id, display_name, avatar_url, share_slug FROM users WHERE share_slug = ? AND sharing_enabled = 1'
@@ -347,10 +347,10 @@ app.get('/card/:slug/image.png', async (c) => {
     lastActive: (stats as any)?.last_active ?? null,
   };
 
-  const png = await generateCardPng(cardData, mode);
-  return new Response(png, {
+  const svg = await generateCardSvg(cardData, mode);
+  return new Response(svg, {
     headers: {
-      'Content-Type': 'image/png',
+      'Content-Type': 'image/svg+xml',
       'Cache-Control': 'public, max-age=3600',
     },
   });

@@ -12,7 +12,6 @@
     "db:seed:local": "wrangler d1 execute claude-leaderboard-db --local --file=migrations/0002_seed_invites.sql"
   },
   "dependencies": {
-    "@resvg/resvg-wasm": "^2.6.2",
     "hono": "^4.7.0",
     "satori": "^0.19.2"
   },

@@ -984,7 +984,7 @@ export function cardPage(
   const rankLabel = `#${stats.rank}`;
   const rankColor = stats.rank === 1 ? '#eab308' : stats.rank === 2 ? '#9ca3af' : stats.rank === 3 ? '#b45309' : '#7c3aed';
   const cardUrl = `https://ccrank.dev/card/${escapeHtml(cardUser.share_slug)}`;
-  const imageUrl = `https://ccrank.dev/card/${escapeHtml(cardUser.share_slug)}/image.png`;
+  const imageUrl = `https://ccrank.dev/card/${escapeHtml(cardUser.share_slug)}/image.svg`;
   const tweetText = encodeURIComponent(`I'm ranked ${rankLabel} on the Claude Code Leaderboard with ${formatCost(stats.total_cost)} spent! Check your ranking at ccrank.dev`);
 
   return `<!DOCTYPE html>
@@ -1077,11 +1077,11 @@ export function cardPage(
       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
       Share on X
     </a>
-    <a href="${imageUrl}" download="${escapeHtml(cardUser.share_slug)}-card.png"
-       class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition">
+    <button id="download-btn"
+       class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition cursor-pointer">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-      Download Image
-    </a>
+      Download PNG
+    </button>
     <button onclick="navigator.clipboard.writeText('${cardUrl}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Link',2000)})"
        class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition cursor-pointer">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
@@ -1102,6 +1102,43 @@ export function cardPage(
     <p class="text-sm text-gray-500 mb-2">Track your own Claude Code usage</p>
     <a href="/" class="text-purple-400 hover:text-purple-300 font-medium transition">Join at ccrank.dev</a>
   </div>
+
+  <script>
+  document.getElementById('download-btn').addEventListener('click', async function() {
+    const btn = this;
+    btn.textContent = 'Generating...';
+    try {
+      const res = await fetch('${imageUrl}');
+      const svgText = await res.text();
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 630;
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0);
+        const a = document.createElement('a');
+        a.download = '${escapeHtml(cardUser.share_slug)}-card.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+        btn.textContent = 'Download PNG';
+      };
+      img.onerror = function() {
+        // Fallback: download SVG directly
+        const blob = new Blob([svgText], { type: 'image/svg+xml' });
+        const a = document.createElement('a');
+        a.download = '${escapeHtml(cardUser.share_slug)}-card.svg';
+        a.href = URL.createObjectURL(blob);
+        a.click();
+        btn.textContent = 'Download PNG';
+      };
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgText)));
+    } catch(e) {
+      btn.textContent = 'Download PNG';
+      alert('Failed to generate image');
+    }
+  });
+  </script>
 
 </body>
 </html>`;
