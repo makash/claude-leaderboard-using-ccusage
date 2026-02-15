@@ -1154,6 +1154,10 @@ export function cardPage(
 }
 
 export function settingsPage(user: User, shareUrl: string | null): string {
+  const favTools: string[] = (() => {
+    try { return JSON.parse(user.fav_tools || '[]'); } catch { return []; }
+  })();
+
   return layout(
     'Settings',
     `<div class="max-w-2xl mx-auto">
@@ -1203,6 +1207,31 @@ export function settingsPage(user: User, shareUrl: string | null): string {
               class="text-xs bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded transition cursor-pointer">Copy</button>
           </div>
         </div>` : ''}
+      </div>
+
+      <!-- Favorite Tools Section -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-2">Favorite Tools</h2>
+        <p class="text-sm text-gray-400 mb-4">What are the Claude Code plugins or skills you can't live without? (shown on your profile)</p>
+        <div class="space-y-3">
+          <input type="text" id="fav-tool-1" value="${escapeHtml(favTools[0] || '')}"
+            placeholder="e.g. playwright MCP"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 transition"
+            maxlength="50">
+          <input type="text" id="fav-tool-2" value="${escapeHtml(favTools[1] || '')}"
+            placeholder="e.g. git-worktree"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 transition"
+            maxlength="50">
+          <input type="text" id="fav-tool-3" value="${escapeHtml(favTools[2] || '')}"
+            placeholder="e.g. sentry skill"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 transition"
+            maxlength="50">
+        </div>
+        <button type="button" id="save-tools-btn"
+          class="mt-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition">
+          Save Tools
+        </button>
+        <div id="tools-message" class="hidden text-sm mt-2"></div>
       </div>
     </div>
 
@@ -1257,6 +1286,43 @@ export function settingsPage(user: User, shareUrl: string | null): string {
         btn.disabled = false;
         btn.textContent = 'Save Settings';
       });
+      // Favorite tools save
+      const toolsBtn = document.getElementById('save-tools-btn');
+      const toolsMsg = document.getElementById('tools-message');
+      if (toolsBtn) {
+        toolsBtn.addEventListener('click', async () => {
+          const favTools = [
+            document.getElementById('fav-tool-1').value.trim(),
+            document.getElementById('fav-tool-2').value.trim(),
+            document.getElementById('fav-tool-3').value.trim(),
+          ].filter(Boolean);
+          toolsBtn.disabled = true;
+          toolsBtn.textContent = 'Saving...';
+          toolsMsg.classList.add('hidden');
+          try {
+            const res = await fetch('/api/settings/sharing', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ enabled, slug: document.getElementById('share-slug').value.trim(), favTools }),
+            });
+            const data = await res.json();
+            toolsMsg.classList.remove('hidden');
+            if (data.ok) {
+              toolsMsg.textContent = 'Tools saved!';
+              toolsMsg.className = 'text-sm mt-2 text-green-400';
+            } else {
+              toolsMsg.textContent = data.error || 'Failed to save';
+              toolsMsg.className = 'text-sm mt-2 text-red-400';
+            }
+          } catch {
+            toolsMsg.classList.remove('hidden');
+            toolsMsg.textContent = 'Network error';
+            toolsMsg.className = 'text-sm mt-2 text-red-400';
+          }
+          toolsBtn.disabled = false;
+          toolsBtn.textContent = 'Save Tools';
+        });
+      }
     })();
     </script>`,
     user

@@ -48,6 +48,7 @@ type Variables = {
     invites_remaining: number;
     sharing_enabled: number;
     share_slug: string | null;
+    fav_tools: string;
   } | null;
   session: SessionPayload | null;
 };
@@ -63,7 +64,7 @@ app.use('*', async (c, next) => {
     if (session) {
       c.set('session', session);
       const user = await c.env.DB.prepare(
-        'SELECT id, google_id, email, display_name, avatar_url, is_admin, invites_remaining, sharing_enabled, share_slug FROM users WHERE id = ?'
+        'SELECT id, google_id, email, display_name, avatar_url, is_admin, invites_remaining, sharing_enabled, share_slug, fav_tools FROM users WHERE id = ?'
       )
         .bind(session.userId)
         .first();
@@ -405,7 +406,7 @@ app.post('/api/settings/sharing', async (c) => {
   const user = c.get('user');
   if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 
-  let body: { enabled: boolean; slug?: string };
+  let body: { enabled: boolean; slug?: string; favTools?: string[] };
   try {
     body = await c.req.json();
   } catch {
@@ -436,6 +437,13 @@ app.post('/api/settings/sharing', async (c) => {
   await c.env.DB.prepare(
     'UPDATE users SET sharing_enabled = ?, share_slug = ? WHERE id = ?'
   ).bind(enabled, enabled ? slug : null, user.id).run();
+
+  if (body.favTools !== undefined) {
+    const tools = (body.favTools || []).slice(0, 3).map(t => String(t).slice(0, 50));
+    await c.env.DB.prepare(
+      'UPDATE users SET fav_tools = ? WHERE id = ?'
+    ).bind(JSON.stringify(tools), user.id).run();
+  }
 
   return c.json({
     ok: true,
