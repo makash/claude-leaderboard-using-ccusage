@@ -499,7 +499,15 @@ export function leaderboardPage(entries: LeaderboardEntry[], user: User | null =
       <div class="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 class="text-2xl font-bold mb-1">Leaderboard</h1>
-          <p class="text-gray-400">${isEfficiencySort ? 'Ranked by efficiency. $100 min + 10 days to qualify.' : 'Who\'s burning the most Claude tokens?'}</p>
+          <p class="text-gray-400">${sort === 'cost'
+            ? 'Who\'s pushing Claude Code the hardest? Ranked by total spend.'
+            : sort === 'output_per_dollar'
+            ? 'Who gets the most code written per dollar? Masters of prompting and task scoping.'
+            : sort === 'cache_rate'
+            ? 'Who reuses context best? High cache rates mean deep, focused work on consistent projects.'
+            : 'Who gets the most output per input? Efficient prompters who let Claude do the heavy lifting.'
+          }</p>
+          ${isEfficiencySort ? '<p class="text-xs text-gray-600 mt-1">$100 minimum spend + 10 active days to qualify for efficiency rankings.</p>' : ''}
         </div>
         <div class="flex gap-1">${tabsHtml}</div>
       </div>
