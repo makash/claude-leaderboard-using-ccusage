@@ -1,41 +1,61 @@
+<div align="center">
+
 # Claude Leaderboard
 
-**Who on your team burns the most Claude tokens?** Find out.
+### Who burns the most Claude tokens on your team?
 
-Claude Leaderboard is an open-source, self-hosted app that lets teams track and compare their [Claude Code](https://claude.ai) usage. Users upload [ccusage](https://github.com/ryoppippi/ccusage) reports and compete on a live leaderboard — ranked by cost, tokens, and activity.
+[![Live Demo](https://img.shields.io/badge/demo-ccrank.dev-8B5CF6?style=for-the-badge)](https://ccrank.dev)
 
-Deploy it for your team in under 10 minutes on Cloudflare Workers (free tier).
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
+[![Hono](https://img.shields.io/badge/Hono-E36002?style=flat-square&logo=hono&logoColor=white)](https://hono.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-**Live demo:** [ccrank.dev](https://ccrank.dev)
+**Track, compare, and compete on [Claude Code](https://claude.ai) usage across your team.**
+Upload [ccusage](https://github.com/ryoppippi/ccusage) reports. See the leaderboard. Earn titles. Talk trash.
+
+Deploy to Cloudflare Workers in under 10 minutes. Free tier. Zero cost.
+
+<br />
+
+<a href="https://ccrank.dev/leaderboard">
+  <img src="https://ccrank.dev/card/makash/image.svg" alt="Claude Leaderboard Screenshot" width="600" />
+</a>
+
+<br />
+<br />
+
+[Live Demo](https://ccrank.dev) &nbsp;&middot;&nbsp; [Quick Start](#-quick-start) &nbsp;&middot;&nbsp; [Features](#-features) &nbsp;&middot;&nbsp; [API](#-api-routes)
+
+</div>
 
 ---
 
-## Why run this for your team?
+## Origin Story
 
-If your team uses Claude Code, you probably have no idea who's using it the most, how much it's costing, or whether people are actually getting value from it.
+It started with a WhatsApp message:
 
-Claude Leaderboard gives you:
+> *"Code a Leaderboard Vivek? Let everyone submit their ccusage :)"*
 
-- **Visibility** — See who's using Claude, how much, and how often
-- **Friendly competition** — Gamified titles (Apprentice → Token Whale → Claude Maximalist) drive adoption
-- **Cost awareness** — Everyone sees the dollar amount, which naturally encourages thoughtful usage
-- **Team bonding** — "How are you at $500 already?!" is a great conversation starter
-
-It takes 10 minutes to deploy and costs nothing to run on Cloudflare's free tier.
+The entire app was built on a phone using [Claude Code](https://claude.ai), deployed to Cloudflare Workers in minutes, and has been running at [ccrank.dev](https://ccrank.dev) ever since. No laptop required. Just vibes and Claude.
 
 ---
 
 ## Features
 
-- **Live leaderboard** — Ranked by total cost, with token counts, days active, and last activity
-- **Gamified titles** — Users earn titles based on spend: Apprentice, Practitioner, Power User, Token Whale, Claude Maximalist
-- **ccusage support** — Parses `daily`, `weekly`, and `session` report formats
-- **Google Sign-In** — OAuth 2.0, no passwords to manage
-- **Invite-only registration** — Control who joins with invite codes; each user gets 3 to share
-- **Admin panel** — Bulk-generate invite codes, view platform stats
-- **Safe re-uploads** — Uploading again updates existing dates without duplicating
-- **Dark themed UI** — Looks great, works on mobile
-- **Zero cost hosting** — Runs entirely on Cloudflare Workers free tier with D1 database
+| | Feature | Description |
+|---|---|---|
+| :trophy: | **Live Leaderboard** | Ranked by total cost, tokens, days active, and last activity |
+| :medal_sports: | **Gamified Titles** | Apprentice, Practitioner, Power User, Token Whale, Claude Maximalist |
+| :clock3: | **Time-Travel History** | Browse daily, weekly, and monthly snapshots with date navigation |
+| :computer: | **Multi-Machine Tracking** | Aggregate usage across laptops, desktops, and cloud instances |
+| :frame_with_picture: | **Shareable Social Cards** | OG-image-ready SVG cards with your stats for Twitter/LinkedIn |
+| :lock: | **Google OAuth** | One-click sign-in, no passwords |
+| :ticket: | **Invite-Only Registration** | Each user gets 3 invite codes to share |
+| :gear: | **Admin Panel** | Bulk invite generation, platform-wide stats |
+| :new_moon: | **Dark Theme** | Beautiful dark UI, fully responsive on mobile |
+| :moneybag: | **Zero Cost Hosting** | Runs entirely on Cloudflare Workers + D1 free tier |
 
 ---
 
@@ -44,30 +64,25 @@ It takes 10 minutes to deploy and costs nothing to run on Cloudflare's free tier
 ### Prerequisites
 
 - [Node.js](https://nodejs.org) v18+
-- A [Cloudflare](https://cloudflare.com) account (free tier works)
-- A [Google Cloud](https://console.cloud.google.com) project for OAuth credentials
+- [Cloudflare](https://cloudflare.com) account (free tier)
+- [Google Cloud](https://console.cloud.google.com) project (for OAuth)
 
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/makash/claude-leaderboard.git
-cd claude-leaderboard
+git clone https://github.com/makash/claude-leaderboard-using-ccusage.git
+cd claude-leaderboard-using-ccusage
 npm install
 ```
 
-### 2. Authenticate with Cloudflare
+### 2. Create D1 database
 
 ```bash
 npx wrangler login
-```
-
-### 3. Create the D1 database
-
-```bash
 npx wrangler d1 create claude-leaderboard-db
 ```
 
-Copy the `database_id` from the output into `wrangler.toml`:
+Copy the `database_id` into `wrangler.toml`:
 
 ```toml
 [[d1_databases]]
@@ -76,45 +91,40 @@ database_name = "claude-leaderboard-db"
 database_id = "YOUR_DATABASE_ID_HERE"
 ```
 
-### 4. Run migrations
+### 3. Run migrations
 
 ```bash
-npm run db:migrate       # create tables
-npm run db:seed          # seed initial invite codes
+npm run db:migrate
+npm run db:seed
 ```
 
-### 5. Set up Google OAuth
+### 4. Configure Google OAuth
 
-1. Go to [Google Cloud Console > Credentials](https://console.cloud.google.com/apis/credentials)
-2. Create a new **OAuth 2.0 Client ID** (Web application)
-3. Add your worker URL as an authorized redirect URI:
-   ```
-   https://your-worker.your-subdomain.workers.dev/auth/google/callback
-   ```
-4. Update `wrangler.toml`:
+1. Create an **OAuth 2.0 Client ID** at [Google Cloud Console > Credentials](https://console.cloud.google.com/apis/credentials)
+2. Add redirect URI: `https://your-worker.workers.dev/auth/google/callback`
+3. Update `wrangler.toml`:
    ```toml
    [vars]
    GOOGLE_CLIENT_ID = "your-client-id.apps.googleusercontent.com"
    ADMIN_EMAIL = "you@gmail.com"
    ```
-5. Set secrets:
+4. Set secrets:
    ```bash
    npx wrangler secret put GOOGLE_CLIENT_SECRET
-   npx wrangler secret put SESSION_SECRET
+   npx wrangler secret put SESSION_SECRET    # use: openssl rand -hex 32
    ```
-   For `SESSION_SECRET`, use any random string (`openssl rand -hex 32`).
 
-### 6. Deploy
+### 5. Deploy
 
 ```bash
 npm run deploy
 ```
 
-That's it. Share the URL with your team and start competing.
+Share the URL. Start competing.
 
 ---
 
-## How to use
+## Usage
 
 ### Generate your report
 
@@ -124,39 +134,34 @@ npx ccusage@latest daily --json > report.json
 
 ### Upload it
 
-1. Sign in at your leaderboard URL
-2. Go to **Upload**
-3. Upload the `report.json` file or paste the JSON
-4. Check the leaderboard
-
-Re-uploading is safe — existing dates get updated, new dates get added.
+Sign in at your leaderboard URL, go to **Upload**, and drop in the JSON. Re-uploading is safe -- existing dates update, new dates get added.
 
 ### Invite your team
 
-After signing up, you get 3 invite codes to share. Go to **Invites** to generate and copy them. Admins can generate bulk codes from the admin panel.
+Each user gets 3 invite codes. Go to **Invites** to generate and share them. Admins can bulk-generate from the admin panel.
 
 ---
 
-## Local Development
+## API Routes
 
-```bash
-# Run migrations locally
-npm run db:migrate:local
-npm run db:seed:local
-
-# Create a .dev.vars file for local secrets
-cat > .dev.vars << 'EOF'
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-SESSION_SECRET=dev-secret-change-me
-ADMIN_EMAIL=you@gmail.com
-EOF
-
-# Start dev server
-npm run dev
-```
-
-Add `http://localhost:8787/auth/google/callback` as an authorized redirect URI in Google Cloud Console for local development.
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/` | Optional | Landing / dashboard |
+| `GET` | `/leaderboard` | No | Public leaderboard |
+| `GET` | `/history` | No | Time-travel history |
+| `GET` | `/about` | No | Origin story |
+| `GET` | `/card/:slug` | No | Public stats card |
+| `GET` | `/card/:slug/image.svg` | No | OG image (SVG) |
+| `GET` | `/settings` | Yes | Sharing settings |
+| `GET` | `/upload` | Yes | Upload form |
+| `GET` | `/invites` | Yes | Manage invites |
+| `GET` | `/admin` | Admin | Admin panel |
+| `POST` | `/api/upload` | Yes | Upload ccusage JSON |
+| `POST` | `/api/settings/sharing` | Yes | Save sharing prefs |
+| `GET` | `/api/leaderboard` | No | Leaderboard JSON |
+| `GET` | `/api/me` | Yes | Current user + stats |
+| `POST` | `/api/invites/create` | Yes | Generate invite code |
+| `POST` | `/api/admin/invites` | Admin | Bulk invite codes |
 
 ---
 
@@ -164,48 +169,119 @@ Add `http://localhost:8787/auth/google/callback` as an authorized redirect URI i
 
 ```
 src/
-  index.ts      Hono app — routes, middleware, API
-  auth.ts       HMAC-SHA256 sessions + Google OAuth
-  parser.ts     ccusage JSON parser (daily/weekly/session)
-  html.ts       Dark-themed HTML templates (Tailwind CSS)
+  index.ts        Hono routes, middleware, API endpoints
+  auth.ts         HMAC-SHA256 sessions + Google OAuth
+  parser.ts       ccusage JSON parser (daily/weekly/session)
+  html.ts         Dark-themed HTML templates (Tailwind CSS)
+  utils.ts        Shared types and utilities
+  card.ts         Social card SVG generation (satori)
+  images.ts       Base64 screenshots for About page
 migrations/
-  0001_initial.sql       Database schema
-  0002_seed_invites.sql  Seed invite codes
-wrangler.toml            Cloudflare Workers config
+  0001_initial.sql         Database schema
+  0002_seed_invites.sql    Seed invite codes
+  0003_add_source.sql      Multi-machine tracking
+  0004_drop_old_index.sql  Index cleanup
+  0005_add_sharing.sql     Social card sharing
 ```
 
-## API
+---
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/` | Optional | Landing page or dashboard |
-| `GET` | `/leaderboard` | No | Leaderboard (public) |
-| `GET` | `/upload` | Yes | Upload form |
-| `GET` | `/invites` | Yes | Manage invite codes |
-| `GET` | `/admin` | Admin | Admin panel |
-| `POST` | `/api/upload` | Yes | Upload ccusage JSON |
-| `GET` | `/api/leaderboard` | No | Leaderboard JSON API |
-| `GET` | `/api/me` | Yes | Current user + stats |
-| `POST` | `/api/invites/create` | Yes | Generate invite code |
-| `POST` | `/api/admin/invites` | Admin | Bulk-generate codes |
+## Local Development
+
+```bash
+npm run db:migrate:local
+npm run db:seed:local
+
+# Create .dev.vars for local secrets
+cat > .dev.vars << 'EOF'
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+SESSION_SECRET=dev-secret-change-me
+ADMIN_EMAIL=you@gmail.com
+EOF
+
+npm run dev
+```
+
+Add `http://localhost:8787/auth/google/callback` as an authorized redirect URI in Google Cloud Console.
 
 ---
 
-## Tech Stack
+## Built With
 
-- **[Hono](https://hono.dev)** — Lightweight web framework for edge
-- **[Cloudflare Workers](https://workers.cloudflare.com)** — Serverless compute (free tier)
-- **[Cloudflare D1](https://developers.cloudflare.com/d1/)** — SQLite at the edge (free tier)
-- **[Tailwind CSS](https://tailwindcss.com)** — Utility-first styling via CDN
-- **[ccusage](https://github.com/ryoppippi/ccusage)** — Claude Code usage tracking CLI
+<table>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://hono.dev">
+        <img src="https://hono.dev/images/logo-small.png" width="40" /><br />
+        <b>Hono</b>
+      </a><br />
+      <sub>Web framework</sub>
+    </td>
+    <td align="center" width="140">
+      <a href="https://workers.cloudflare.com">
+        <img src="https://www.svgrepo.com/show/353564/cloudflare.svg" width="40" /><br />
+        <b>CF Workers</b>
+      </a><br />
+      <sub>Serverless compute</sub>
+    </td>
+    <td align="center" width="140">
+      <a href="https://developers.cloudflare.com/d1/">
+        <img src="https://www.svgrepo.com/show/354428/sqlite.svg" width="40" /><br />
+        <b>D1 (SQLite)</b>
+      </a><br />
+      <sub>Edge database</sub>
+    </td>
+    <td align="center" width="140">
+      <a href="https://tailwindcss.com">
+        <img src="https://www.svgrepo.com/show/374118/tailwind.svg" width="40" /><br />
+        <b>Tailwind CSS</b>
+      </a><br />
+      <sub>Styling via CDN</sub>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/ryoppippi/ccusage">
+        <img src="https://github.githubassets.com/favicons/favicon-dark.svg" width="40" /><br />
+        <b>ccusage</b>
+      </a><br />
+      <sub>Usage tracking CLI</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
-## Built by Akash Mahajan
+## Contributing
 
-- [GitHub](https://github.com/makash)
-- [X / Twitter](https://x.com/makash)
-- [LinkedIn](https://www.linkedin.com/in/akashm/)
-- [YouTube](https://www.youtube.com/@makash)
+Contributions are welcome! Feel free to open issues and pull requests.
 
-If you deploy this for your team, I'd love to hear about it — [tweet at me](https://x.com/makash)!
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feat/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feat/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## Author
+
+**Akash Mahajan** ([@makash](https://github.com/makash))
+
+[![GitHub](https://img.shields.io/badge/GitHub-makash-181717?style=flat-square&logo=github)](https://github.com/makash)
+[![Twitter](https://img.shields.io/badge/Twitter-@makash-1DA1F2?style=flat-square&logo=twitter&logoColor=white)](https://x.com/makash)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-akashm-0A66C2?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/akashm/)
+[![YouTube](https://img.shields.io/badge/YouTube-@makash-FF0000?style=flat-square&logo=youtube)](https://www.youtube.com/@makash)
+
+If you deploy this for your team, I would love to hear about it -- [tweet at me](https://x.com/makash)!
+
+---
+
+## License
+
+MIT
+
+---
+
+<div align="center">
+  <sub>Built with Claude Code. Deployed from a phone. Powered by <a href="https://github.com/ryoppippi/ccusage">ccusage</a> by <a href="https://github.com/ryoppippi">ryoppippi</a>.</sub>
+</div>

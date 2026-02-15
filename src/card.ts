@@ -1,10 +1,21 @@
 /**
  * OG image generation for shareable social stats cards.
- * Uses satori to generate SVG on Cloudflare Workers.
- * PNG conversion happens client-side via canvas for downloads.
+ * Uses satori's standalone/WASM build for CF Workers compatibility.
+ * The yoga.wasm binary is imported statically so wrangler compiles it into
+ * a WebAssembly.Module at deploy time, bypassing CF Workers' WASM restrictions.
  */
-import satori from 'satori';
+import satori, { init } from 'satori/standalone';
+import yogaWasm from './yoga.wasm';
 import { getTitle, formatTokens, formatCost } from './utils';
+
+// Track yoga WASM initialization
+let yogaInitialized = false;
+
+async function ensureYogaInit(): Promise<void> {
+  if (yogaInitialized) return;
+  await init(yogaWasm as any);
+  yogaInitialized = true;
+}
 
 // Cache font in module scope
 let fontData: ArrayBuffer | null = null;
@@ -37,6 +48,7 @@ function getRankAccent(rank: number): { color: string; label: string } {
 }
 
 export async function generateCardSvg(data: CardData, mode: 'simple' | 'full'): Promise<string> {
+  await ensureYogaInit();
   const font = await getFont();
   const title = getTitle(data.totalCost);
   const rankInfo = getRankAccent(data.rank);
@@ -52,9 +64,10 @@ export async function generateCardSvg(data: CardData, mode: 'simple' | 'full'): 
           left: 0,
           right: 0,
           height: 6,
+          display: 'flex',
           background: `linear-gradient(90deg, ${rankInfo.color}, #7c3aed)`,
         },
-        children: [],
+        children: '',
       },
     },
     // Header row: rank + name + title
