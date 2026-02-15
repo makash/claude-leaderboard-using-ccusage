@@ -16,7 +16,7 @@ import {
 } from './utils';
 import { IMG_RAJAN_MESSAGE, IMG_CLAUDE_BUILDING, IMG_APP_SHARED, IMG_DOMAIN_PURCHASE } from './images';
 
-function layout(title: string, content: string, user: User | null = null): string {
+function layout(title: string, content: string, user: User | null = null, ogOverrides?: { image?: string; description?: string }): string {
   const nav = user
     ? `<nav class="border-b border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -60,16 +60,16 @@ function layout(title: string, content: string, user: User | null = null): strin
   <meta name="author" content="Akash Mahajan">
   <meta name="description" content="Track and compare your Claude Code usage. Upload ccusage reports and compete on the leaderboard.">
   <meta property="og:title" content="${escapeHtml(title)} | ccrank.dev">
-  <meta property="og:description" content="Track and compare your Claude Code usage. Upload ccusage reports and see where you rank.">
+  <meta property="og:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Track and compare your Claude Code usage. Upload ccusage reports and see where you rank.'}">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://imgs.kloudle.com/kloudle-customer-logos/ccrank-dev/ccrank-open-graph-image.webp">
+  <meta property="og:image" content="${ogOverrides?.image || 'https://imgs.kloudle.com/kloudle-customer-logos/ccrank-dev/ccrank-open-graph-image.webp'}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:creator" content="@makash">
   <meta name="twitter:title" content="${escapeHtml(title)} | ccrank.dev">
-  <meta name="twitter:description" content="Track and compare your Claude Code usage. Upload ccusage reports and see where you rank.">
-  <meta name="twitter:image" content="https://imgs.kloudle.com/kloudle-customer-logos/ccrank-dev/ccrank-open-graph-image.webp">
+  <meta name="twitter:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Track and compare your Claude Code usage. Upload ccusage reports and see where you rank.'}">
+  <meta name="twitter:image" content="${ogOverrides?.image || 'https://imgs.kloudle.com/kloudle-customer-logos/ccrank-dev/ccrank-open-graph-image.webp'}">
   <meta property="og:site_name" content="ccrank.dev">
   <meta property="og:url" content="https://ccrank.dev/">
   <link rel="canonical" href="https://ccrank.dev/">
@@ -1512,7 +1512,10 @@ export function profilePage(
   }
   </script>`;
 
-  return layout('Profile - ' + profileUser.display_name, content, viewer);
+  const ogImage = `https://ccrank.dev/card/${escapeHtml(profileUser.share_slug)}/image.svg`;
+  const ogDesc = `${title.label} ranked #${stats.rank} on ccrank.dev. ${stats.days_active} days active, ${formatTokens(stats.total_tokens)} tokens.`;
+
+  return layout('Profile - ' + profileUser.display_name, content, viewer, { image: ogImage, description: ogDesc });
 }
 
 export function errorPage(title: string, message: string, user: User | null = null): string {
