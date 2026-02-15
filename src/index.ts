@@ -263,8 +263,8 @@ app.get('/leaderboard', async (c) => {
       CASE WHEN COALESCE(SUM(d.total_tokens), 0) > 0
         THEN CAST(COALESCE(SUM(d.cache_read_tokens), 0) AS REAL) / COALESCE(SUM(d.total_tokens), 1)
         ELSE 0 END as cache_rate,
-      CASE WHEN COALESCE(SUM(d.total_tokens), 0) > 0
-        THEN CAST(COALESCE(SUM(d.output_tokens), 0) AS REAL) / COALESCE(SUM(d.total_tokens), 1)
+      CASE WHEN (COALESCE(SUM(d.total_tokens), 0) - COALESCE(SUM(d.cache_read_tokens), 0)) > 0
+        THEN CAST(COALESCE(SUM(d.output_tokens), 0) AS REAL) / (COALESCE(SUM(d.total_tokens), 0) - COALESCE(SUM(d.cache_read_tokens), 0))
         ELSE 0 END as output_ratio
     FROM users u
     LEFT JOIN daily_usage d ON u.id = d.user_id
@@ -404,7 +404,7 @@ app.get('/user/:slug', async (c) => {
     last_active: (stats as any)?.last_active ?? null,
     output_per_dollar: totalCost > 0 ? totalOutputTokens / totalCost : 0,
     cache_rate: totalTokens > 0 ? totalCacheRead / totalTokens : 0,
-    output_ratio: totalTokens > 0 ? totalOutputTokens / totalTokens : 0,
+    output_ratio: (totalTokens - totalCacheRead) > 0 ? totalOutputTokens / (totalTokens - totalCacheRead) : 0,
     meets_efficiency_threshold: totalCost >= 100 && daysActive >= 10,
   };
 
@@ -877,8 +877,8 @@ app.get('/api/leaderboard', async (c) => {
       CASE WHEN COALESCE(SUM(d.total_tokens), 0) > 0
         THEN CAST(COALESCE(SUM(d.cache_read_tokens), 0) AS REAL) / COALESCE(SUM(d.total_tokens), 1)
         ELSE 0 END as cache_rate,
-      CASE WHEN COALESCE(SUM(d.total_tokens), 0) > 0
-        THEN CAST(COALESCE(SUM(d.output_tokens), 0) AS REAL) / COALESCE(SUM(d.total_tokens), 1)
+      CASE WHEN (COALESCE(SUM(d.total_tokens), 0) - COALESCE(SUM(d.cache_read_tokens), 0)) > 0
+        THEN CAST(COALESCE(SUM(d.output_tokens), 0) AS REAL) / (COALESCE(SUM(d.total_tokens), 0) - COALESCE(SUM(d.cache_read_tokens), 0))
         ELSE 0 END as output_ratio
     FROM users u
     LEFT JOIN daily_usage d ON u.id = d.user_id
