@@ -265,7 +265,7 @@ export function landingPage(topEntries: LeaderboardEntry[]): string {
           ccrank.dev
         </h1>
         <p class="text-xl text-gray-400 max-w-lg mx-auto leading-relaxed">
-          Who on your team burns the most Claude tokens? Find out.
+          Track Claude usage. Benchmark your leverage.
         </p>
         <p class="text-xs text-gray-500 mt-2">by <a href="https://x.com/makash?utm_source=ccrank&utm_medium=web&utm_campaign=hero" target="_blank" rel="noopener" class="text-gray-400 hover:text-gray-300 transition">@makash</a></p>
       </div>
