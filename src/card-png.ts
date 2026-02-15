@@ -75,8 +75,11 @@ export function generateCardHtml(data: CardData, mode: 'simple' | 'full'): strin
     ${favToolsHtml}
     ${lastActiveHtml}
 
-    <div style="display: flex; position: absolute; bottom: 32px; right: 48px; align-items: center; gap: 8px;">
-      <div style="display: flex; font-size: 20px; color: #6b7280;">ccrank.dev</div>
+    <div style="display: flex; position: absolute; bottom: 32px; left: 48px; right: 48px; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; font-size: 18px; color: #a78bfa; font-weight: 600;">See where you rank</div>
+        <div style="display: flex; font-size: 18px; color: #6b7280;">ccrank.dev</div>
+      </div>
     </div>
   </div>`;
 }

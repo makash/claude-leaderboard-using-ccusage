@@ -264,24 +264,40 @@ export async function generateCardSvg(data: CardData, mode: 'simple' | 'full'): 
     });
   }
 
-  // Footer branding
+  // Footer branding with CTA
   children.push({
     type: 'div',
     props: {
       style: {
         position: 'absolute',
         bottom: 32,
+        left: 48,
         right: 48,
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
+        justifyContent: 'space-between',
       },
       children: [
         {
           type: 'div',
           props: {
-            style: { fontSize: 20, color: '#6b7280' },
-            children: 'ccrank.dev',
+            style: { display: 'flex', alignItems: 'center', gap: 10 },
+            children: [
+              {
+                type: 'div',
+                props: {
+                  style: { fontSize: 18, color: '#a78bfa', fontWeight: 600 },
+                  children: 'See where you rank',
+                },
+              },
+              {
+                type: 'div',
+                props: {
+                  style: { fontSize: 18, color: '#6b7280' },
+                  children: 'ccrank.dev',
+                },
+              },
+            ],
           },
         },
       ],

@@ -1042,7 +1042,7 @@ export function cardPage(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(cardUser.display_name)}'s Claude Stats - ccrank.dev</title>
-  <meta property="og:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on Claude Leaderboard">
+  <meta property="og:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code Leaderboard | ccrank.dev">
   <meta property="og:description" content="${title.label} with ${formatCost(stats.total_cost)} spent on Claude Code. ${stats.days_active} days active. ccrank.dev is the leaderboard for Claude Code power users.">
   <meta property="og:image" content="${imageUrl}">
   <meta property="og:image:width" content="1200">
@@ -1050,7 +1050,7 @@ export function cardPage(
   <meta property="og:url" content="${cardUrl}">
   <meta property="og:type" content="profile">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on Claude Leaderboard">
+  <meta name="twitter:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code Leaderboard | ccrank.dev">
   <meta name="twitter:description" content="${title.label} with ${formatCost(stats.total_cost)} spent. ${stats.days_active} days active. ccrank.dev is the leaderboard for Claude Code power users.">
   <meta name="twitter:image" content="${imageUrl}">
   <meta name="twitter:creator" content="@makash">
