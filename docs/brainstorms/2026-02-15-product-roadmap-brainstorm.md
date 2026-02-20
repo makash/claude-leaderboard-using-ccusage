@@ -33,6 +33,7 @@ Items extracted from the blog post + brainstorm session, categorized by implemen
 | A6 | Metric-specific tips (static) | Show guidance based on metric thresholds: "Your cache rate is X% — top performers hit 95%+." Server-side logic in templates. | Guidance |
 | A7 | Upload success screen improvements | Post-upload: show rank change, metric deltas, "Your Output/$ went up 12%!" | Engagement |
 | A8 | Milestone notifications | "You crossed $100! You now qualify for efficiency rankings." Shown on dashboard. | Engagement |
+| A9 | Aggregate usage intelligence | Mine anonymized data for insights: model mix vs efficiency, session patterns, spending curves, tool preferences, cohort benchmarks. Powers A6/B1/B2 with real data. | Guidance |
 
 ### Category B: Needs Small Changes (new migration, new table, or new module — each < 1 day)
 
@@ -85,6 +86,14 @@ Compare this week vs last week, this month vs last month:
 - "Your cache rate dropped 3% — did you start a new project?"
 
 **Implementation:** Two-period comparison queries. Display as delta badges on dashboard.
+
+### The Data Flywheel (A9)
+More users upload → richer aggregate data → better benchmarks and guidance → more users want to upload. This is the engine that makes Layers 1-3 increasingly valuable over time. Insights to mine from aggregated ccusage data:
+- **Model mix vs efficiency** — Do Opus-heavy users get more output/$ than Sonnet-heavy users? Optimal mix?
+- **Session patterns** — Do shorter focused sessions correlate with higher cache rates?
+- **Spending curves** — Do users plateau? Does efficiency improve with experience?
+- **Tool preferences** — Which Claude Code tools do the most efficient users favor?
+- **Cohort benchmarks** — "Devs spending $500-1K/month typically hit 400 tokens/$ after 3 months"
 
 ### Future Layer: AI-Powered Coaching
 Use Claude API to analyze a user's usage patterns and generate personalized advice. "Based on your model mix and session patterns, here are 3 things to try this week." This is the premium feature.
