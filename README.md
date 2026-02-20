@@ -136,6 +136,24 @@ npx ccusage@latest daily --json > report.json
 
 Sign in at your leaderboard URL, go to **Upload**, and drop in the JSON. Re-uploading is safe -- existing dates update, new dates get added.
 
+### Git metadata (optional)
+
+Add git activity to your profile with a local upload:
+
+```bash
+npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN
+```
+
+Or run both git + ccusage in one go:
+
+```bash
+npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN --all
+```
+
+Go CLI supports multi-repo scanning and machine names. See `docs/git-metadata.md`.
+
+Generate your token in **Settings → Git Metadata**. Full details in `docs/git-metadata.md` (includes Go CLI downloads).
+
 ### Invite your team
 
 Each user gets 3 invite codes. Go to **Invites** to generate and share them. Admins can bulk-generate from the admin panel.

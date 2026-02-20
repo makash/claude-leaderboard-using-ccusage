@@ -1,0 +1,33 @@
+name: ccrank-git release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build binaries
+        run: |
+          cd cli/ccrank-git
+          mkdir -p dist
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o dist/ccrank-git_darwin_arm64 .
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o dist/ccrank-git_linux_amd64 .
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o dist/ccrank-git_windows_amd64.exe .
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            cli/ccrank-git/dist/ccrank-git_darwin_arm64
+            cli/ccrank-git/dist/ccrank-git_linux_amd64
+            cli/ccrank-git/dist/ccrank-git_windows_amd64.exe

@@ -12,6 +12,7 @@ export interface User {
   is_admin: number;
   invites_remaining: number;
   sharing_enabled: number;
+  git_sharing_enabled: number;
   share_slug: string | null;
   fav_tools: string; // JSON array of up to 3 strings
 }

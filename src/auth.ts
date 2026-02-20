@@ -105,6 +105,22 @@ export function generateInviteCode(): string {
   return segments.join('-');
 }
 
+export function generateApiToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export async function hashApiToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', ENCODER.encode(token));
+  const bytes = new Uint8Array(digest);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 // Google OAuth helpers
 export interface GoogleUser {
   id: string;

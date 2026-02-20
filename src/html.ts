@@ -1224,10 +1224,41 @@ export function cardPage(
 </html>`;
 }
 
-export function settingsPage(user: User, shareUrl: string | null): string {
+export function settingsPage(
+  user: User,
+  shareUrl: string | null,
+  tokens: { id: string; token_prefix: string; created_at: string; last_used_at: string | null }[],
+  gitProjects: { id: string; repo_name: string; repo_slug: string; description: string; description_override: number }[]
+): string {
   const favTools: string[] = (() => {
     try { return JSON.parse(user.fav_tools || '[]'); } catch { return []; }
   })();
+
+  const tokensHtml = tokens.length > 0
+    ? tokens.map((t) => `
+        <div class="flex items-center justify-between bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2">
+          <div>
+            <div class="text-sm text-gray-300 font-mono">token_${escapeHtml(t.token_prefix)}</div>
+            <div class="text-xs text-gray-500">Created ${escapeHtml(t.created_at)}${t.last_used_at ? ` · Last used ${escapeHtml(t.last_used_at)}` : ''}</div>
+          </div>
+          <button data-token-id="${escapeHtml(t.id)}" class="revoke-token text-xs bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-700/40 px-3 py-1 rounded transition">Revoke</button>
+        </div>
+      `).join('')
+    : `<p class="text-sm text-gray-500">No API tokens yet.</p>`;
+
+  const projectsHtml = gitProjects.length > 0
+    ? gitProjects.map((p) => `
+        <div class="bg-gray-800/50 border border-gray-700 rounded-lg p-3 mb-3">
+          <div class="text-sm font-semibold text-gray-200 mb-2">${escapeHtml(p.repo_name)}</div>
+          <div class="text-xs text-gray-500 mb-2">${escapeHtml(p.repo_slug)}</div>
+          <textarea data-project-id="${escapeHtml(p.id)}" class="project-desc w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 transition" rows="2" maxlength="200">${escapeHtml(p.description)}</textarea>
+          <div class="flex items-center justify-between mt-2">
+            <span class="text-xs text-gray-500">${p.description_override ? 'Custom description' : 'Auto-derived'}</span>
+            <button data-project-id="${escapeHtml(p.id)}" class="save-project text-xs bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-700/40 px-3 py-1 rounded transition">Save</button>
+          </div>
+        </div>
+      `).join('')
+    : `<p class="text-sm text-gray-500">No git projects uploaded yet.</p>`;
 
   return layout(
     'Settings',
@@ -1303,6 +1334,46 @@ export function settingsPage(user: User, shareUrl: string | null): string {
           Save Tools
         </button>
         <div id="tools-message" class="hidden text-sm mt-2"></div>
+      </div>
+
+      <!-- Git Metadata Section -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-2">Git Metadata</h2>
+        <p class="text-sm text-gray-400 mb-4">Control visibility and manage your CLI upload tokens.</p>
+
+        <div class="flex items-center justify-between mb-4">
+          <label class="text-sm text-gray-300">Show git metadata on my profile</label>
+          <button type="button" id="git-sharing-toggle"
+            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${user.git_sharing_enabled ? 'bg-purple-600' : 'bg-gray-700'}"
+            role="switch" aria-checked="${user.git_sharing_enabled ? 'true' : 'false'}">
+            <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user.git_sharing_enabled ? 'translate-x-5' : 'translate-x-0'}"></span>
+          </button>
+        </div>
+
+        <div id="git-sharing-message" class="hidden text-sm mt-2"></div>
+
+        <div class="mt-6 pt-6 border-t border-gray-800">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-200">API Tokens</h3>
+            <button id="create-token" class="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded transition">Generate Token</button>
+          </div>
+          <div id="token-list" class="space-y-2">${tokensHtml}</div>
+          <div id="new-token" class="hidden mt-3 bg-gray-800 border border-gray-700 rounded-lg p-3">
+            <div class="text-xs text-gray-400 mb-2">Copy this token now. You won't see it again.</div>
+            <code id="new-token-value" class="text-xs text-green-300 break-all"></code>
+          </div>
+          <div class="mt-4 text-xs text-gray-500">
+            Download the CLI:
+            <a class="text-purple-300 hover:text-purple-200 ml-2" href="https://github.com/makash/claude-leaderboard-using-ccusage/releases/latest/download/ccrank-git_darwin_arm64" target="_blank" rel="noopener">macOS arm64</a>
+            <a class="text-purple-300 hover:text-purple-200 ml-2" href="https://github.com/makash/claude-leaderboard-using-ccusage/releases/latest/download/ccrank-git_linux_amd64" target="_blank" rel="noopener">Linux x64</a>
+            <a class="text-purple-300 hover:text-purple-200 ml-2" href="https://github.com/makash/claude-leaderboard-using-ccusage/releases/latest/download/ccrank-git_windows_amd64.exe" target="_blank" rel="noopener">Windows x64</a>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-gray-800">
+          <h3 class="text-sm font-semibold text-gray-200 mb-3">Project Descriptions</h3>
+          <div id="project-list">${projectsHtml}</div>
+        </div>
       </div>
     </div>
 
@@ -1394,6 +1465,131 @@ export function settingsPage(user: User, shareUrl: string | null): string {
           toolsBtn.textContent = 'Save Tools';
         });
       }
+
+      // Git sharing toggle
+      const gitToggle = document.getElementById('git-sharing-toggle');
+      const gitMsg = document.getElementById('git-sharing-message');
+      let gitEnabled = ${user.git_sharing_enabled ? 'true' : 'false'};
+      if (gitToggle) {
+        gitToggle.addEventListener('click', async () => {
+          gitEnabled = !gitEnabled;
+          gitToggle.classList.toggle('bg-purple-600', gitEnabled);
+          gitToggle.classList.toggle('bg-gray-700', !gitEnabled);
+          gitToggle.setAttribute('aria-checked', String(gitEnabled));
+          const thumb = gitToggle.querySelector('span');
+          thumb.classList.toggle('translate-x-5', gitEnabled);
+          thumb.classList.toggle('translate-x-0', !gitEnabled);
+          try {
+            const res = await fetch('/api/settings/git-sharing', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ enabled: gitEnabled }),
+            });
+            const data = await res.json();
+            gitMsg.classList.remove('hidden');
+            if (data.ok) {
+              gitMsg.textContent = 'Git visibility updated';
+              gitMsg.className = 'text-sm mt-2 text-green-400';
+            } else {
+              gitMsg.textContent = data.error || 'Failed to update';
+              gitMsg.className = 'text-sm mt-2 text-red-400';
+            }
+          } catch {
+            gitMsg.classList.remove('hidden');
+            gitMsg.textContent = 'Network error';
+            gitMsg.className = 'text-sm mt-2 text-red-400';
+          }
+        });
+      }
+
+      // Token management
+      const createTokenBtn = document.getElementById('create-token');
+      const newTokenBox = document.getElementById('new-token');
+      const newTokenValue = document.getElementById('new-token-value');
+      if (createTokenBtn) {
+        createTokenBtn.addEventListener('click', async () => {
+          createTokenBtn.disabled = true;
+          createTokenBtn.textContent = 'Generating...';
+          try {
+            const res = await fetch('/api/tokens/create', { method: 'POST' });
+            const data = await res.json();
+            if (data.ok && data.token) {
+              newTokenBox.classList.remove('hidden');
+              newTokenValue.textContent = data.token;
+              const list = document.getElementById('token-list');
+              if (list && data.token_prefix && data.id) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex items-center justify-between bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2';
+                wrapper.innerHTML = '<div>' +
+                  '<div class=\"text-sm text-gray-300 font-mono\">token_' + data.token_prefix + '</div>' +
+                  '<div class=\"text-xs text-gray-500\">Created just now</div>' +
+                  '</div>' +
+                  '<button data-token-id=\"' + data.id + '\" class=\"revoke-token text-xs bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-700/40 px-3 py-1 rounded transition\">Revoke</button>';
+                list.prepend(wrapper);
+                const revokeBtn = wrapper.querySelector('.revoke-token');
+                if (revokeBtn) {
+                  revokeBtn.addEventListener('click', async () => {
+                    revokeBtn.textContent = 'Revoking...';
+                    try {
+                      await fetch('/api/tokens/revoke', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: data.id }),
+                      });
+                      location.reload();
+                    } catch {
+                      revokeBtn.textContent = 'Revoke';
+                    }
+                  });
+                }
+              }
+            }
+          } catch {}
+          createTokenBtn.disabled = false;
+          createTokenBtn.textContent = 'Generate Token';
+        });
+      }
+
+      document.querySelectorAll('.revoke-token').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-token-id');
+          if (!id) return;
+          btn.textContent = 'Revoking...';
+          try {
+            await fetch('/api/tokens/revoke', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id }),
+            });
+            location.reload();
+          } catch {
+            btn.textContent = 'Revoke';
+          }
+        });
+      });
+
+      // Project description save
+      document.querySelectorAll('.save-project').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-project-id');
+          const textarea = document.querySelector('.project-desc[data-project-id=\"' + id + '\"]');
+          if (!id || !textarea) return;
+          btn.textContent = 'Saving...';
+          try {
+            const res = await fetch('/api/git/projects/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ projectId: id, description: textarea.value.trim() }),
+            });
+            const data = await res.json();
+            btn.textContent = data.ok ? 'Saved' : 'Error';
+            setTimeout(() => { btn.textContent = 'Save'; }, 1000);
+          } catch {
+            btn.textContent = 'Error';
+            setTimeout(() => { btn.textContent = 'Save'; }, 1000);
+          }
+        });
+      });
     })();
     </script>`,
     user
@@ -1429,8 +1625,17 @@ function renderHeatmap(data: { date: string; cost: number; tokens: number; sessi
   return `<div class="grid grid-flow-col gap-1" style="grid-template-rows:repeat(7,1fr)">${cells}</div>`;
 }
 
+function renderSparkline(values: number[], color: string): string {
+  const maxVal = Math.max(...values, 1);
+  const bars = values.map((v) => {
+    const height = Math.max(2, Math.round((v / maxVal) * 48));
+    return `<div style="height:${height}px;background:${color}" class="w-2 rounded-sm"></div>`;
+  }).join('');
+  return `<div class="flex items-end gap-1 h-12">${bars}</div>`;
+}
+
 export function profilePage(
-  profileUser: { display_name: string; avatar_url: string | null; share_slug: string },
+  profileUser: { id: string; display_name: string; avatar_url: string | null; share_slug: string },
   stats: {
     total_cost: number;
     total_tokens: number;
@@ -1445,6 +1650,22 @@ export function profilePage(
   },
   favTools: string[],
   heatmapData: { date: string; cost: number; tokens: number; sessions: number }[],
+  gitData: {
+    dates: string[];
+    projects: {
+      id: string;
+      repo_name: string;
+      repo_slug: string;
+      description: string;
+      description_override: number;
+      per_day: number[];
+      total_commits: number;
+      commits_per_day: number;
+      streak: number;
+    }[];
+    aggregate: { avg_commits_per_day: number; streak: number; total_commits: number };
+    series: { git: number[]; usage: number[] };
+  } | null,
   isOwner: boolean,
   viewer: User | null
 ): string {
@@ -1493,6 +1714,71 @@ export function profilePage(
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
         Share on X
       </a>
+    </div>`;
+  }
+
+  let gitHtml = '';
+  if (gitData && (gitData.projects.length > 0 || isOwner)) {
+    const gitTrend = renderSparkline(gitData.series.git, 'rgba(139, 92, 246, 0.9)');
+    const usageTrend = renderSparkline(gitData.series.usage, 'rgba(34, 197, 94, 0.9)');
+    const projectCards = gitData.projects.map((p) => {
+      const spark = renderSparkline(p.per_day, 'rgba(59, 130, 246, 0.9)');
+      return `<div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <div class="text-sm font-semibold">${escapeHtml(p.repo_name)}</div>
+            <div class="text-xs text-gray-500">${escapeHtml(p.description)}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs text-gray-400">Commits/day</div>
+            <div class="text-sm font-semibold text-purple-300">${p.commits_per_day.toFixed(2)}</div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-4">
+          <div>${spark}</div>
+          <div class="text-xs text-gray-400">Streak: <span class="text-gray-200 font-semibold">${p.streak}d</span></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    gitHtml = `<div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8" data-git-profile="${escapeHtml(profileUser.id)}">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Git Momentum</h2>
+        <span class="text-xs text-gray-500">Last 28 days</span>
+      </div>
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 text-center">
+          <div class="text-xs text-gray-400 mb-1">Avg commits/day</div>
+          <div class="text-lg font-bold text-purple-300">${gitData.aggregate.avg_commits_per_day.toFixed(2)}</div>
+        </div>
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 text-center">
+          <div class="text-xs text-gray-400 mb-1">Streak</div>
+          <div class="text-lg font-bold text-cyan-300">${gitData.aggregate.streak}d</div>
+        </div>
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-3 text-center">
+          <div class="text-xs text-gray-400 mb-1">Total commits</div>
+          <div class="text-lg font-bold text-green-300">${gitData.aggregate.total_commits}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <div class="text-xs text-gray-400 mb-2">Git commits</div>
+          ${gitTrend}
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-2">Claude usage (tokens)</div>
+          ${usageTrend}
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${projectCards || '<div class="text-sm text-gray-500">No projects uploaded yet.</div>'}
+      </div>
+      <div class="mt-6 pt-4 border-t border-gray-800 flex items-center gap-3">
+        <span class="text-xs text-gray-500">Was this helpful?</span>
+        <button data-rating="1" class="git-feedback text-xs bg-gray-800 hover:bg-gray-700 text-green-300 px-2.5 py-1 rounded">Up</button>
+        <button data-rating="-1" class="git-feedback text-xs bg-gray-800 hover:bg-gray-700 text-red-300 px-2.5 py-1 rounded">Down</button>
+        <span id="git-feedback-msg" class="text-xs text-gray-500"></span>
+      </div>
     </div>`;
   }
 
@@ -1551,6 +1837,8 @@ export function profilePage(
       </div>
     </div>` : ''}
 
+    ${gitHtml}
+
     <!-- Activity Heatmap -->
     <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8">
       <div class="flex items-center justify-between mb-4">
@@ -1595,6 +1883,31 @@ export function profilePage(
       tab.classList.toggle('text-gray-400', m !== metric);
     });
   }
+
+  (function() {
+    const container = document.querySelector('[data-git-profile]');
+    if (!container) return;
+    const profileId = container.getAttribute('data-git-profile');
+    const msg = document.getElementById('git-feedback-msg');
+    document.querySelectorAll('.git-feedback').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const rating = Number(btn.getAttribute('data-rating'));
+        try {
+          const res = await fetch('/api/git/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: profileId, rating }),
+          });
+          const data = await res.json();
+          if (msg) {
+            msg.textContent = data.ok ? 'Thanks for the feedback.' : 'Could not record feedback.';
+          }
+        } catch {
+          if (msg) msg.textContent = 'Network error.';
+        }
+      });
+    });
+  })();
   </script>`;
 
   const ogDesc = `${title.label} ranked #${stats.rank} on ccrank.dev. ${stats.days_active} days active, ${formatTokens(stats.total_tokens)} tokens. ccrank.dev is the leaderboard for Claude Code power users.`;

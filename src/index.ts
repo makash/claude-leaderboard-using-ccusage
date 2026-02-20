@@ -5,6 +5,8 @@ import {
   verifySessionToken,
   generateId,
   generateInviteCode,
+  generateApiToken,
+  hashApiToken,
   getGoogleAuthorizeUrl,
   exchangeGoogleCode,
   getGoogleUser,
@@ -52,6 +54,7 @@ type Variables = {
     is_admin: number;
     invites_remaining: number;
     sharing_enabled: number;
+    git_sharing_enabled: number;
     share_slug: string | null;
     fav_tools: string;
   } | null;
@@ -69,7 +72,7 @@ app.use('*', async (c, next) => {
     if (session) {
       c.set('session', session);
       const user = await c.env.DB.prepare(
-        'SELECT id, google_id, email, display_name, avatar_url, is_admin, invites_remaining, sharing_enabled, share_slug, fav_tools FROM users WHERE id = ?'
+        'SELECT id, google_id, email, display_name, avatar_url, is_admin, invites_remaining, sharing_enabled, git_sharing_enabled, share_slug, fav_tools FROM users WHERE id = ?'
       )
         .bind(session.userId)
         .first();
@@ -101,9 +104,53 @@ function requireAdmin(c: any): Response | null {
   return null;
 }
 
+async function getTokenUser(c: any): Promise<Variables['user'] | null> {
+  const authHeader = c.req.header('Authorization') || '';
+  if (!authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice('Bearer '.length).trim();
+  if (!token) return null;
+
+  const tokenHash = await hashApiToken(token);
+  const tokenRow = await c.env.DB.prepare(
+    'SELECT id, user_id FROM api_tokens WHERE token_hash = ? AND revoked_at IS NULL'
+  ).bind(tokenHash).first();
+
+  if (!tokenRow) return null;
+
+  await c.env.DB.prepare(
+    'UPDATE api_tokens SET last_used_at = datetime(\'now\') WHERE id = ?'
+  ).bind((tokenRow as any).id).run();
+
+  const user = await c.env.DB.prepare(
+    'SELECT id, google_id, email, display_name, avatar_url, is_admin, invites_remaining, sharing_enabled, git_sharing_enabled, share_slug, fav_tools FROM users WHERE id = ?'
+  ).bind((tokenRow as any).user_id).first();
+
+  return user as Variables['user'];
+}
+
 function getBaseUrl(c: any): string {
   const url = new URL(c.req.url);
   return `${url.protocol}//${url.host}`;
+}
+
+function getLastNDates(days: number): string[] {
+  const dates: string[] = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+function computeStreak(values: number[]): number {
+  let streak = 0;
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (values[i] > 0) streak += 1;
+    else break;
+  }
+  return streak;
 }
 
 // ─── Pages ──────────────────────────────────────────────────────────────────────
@@ -359,7 +406,7 @@ app.get('/admin', async (c) => {
 app.get('/user/:slug', async (c) => {
   const slug = c.req.param('slug');
   const profileUser = await c.env.DB.prepare(
-    'SELECT id, display_name, avatar_url, share_slug, fav_tools FROM users WHERE share_slug = ? AND sharing_enabled = 1'
+    'SELECT id, display_name, avatar_url, share_slug, fav_tools, git_sharing_enabled FROM users WHERE share_slug = ? AND sharing_enabled = 1'
   ).bind(slug).first();
 
   if (!profileUser) return c.html(errorPage('Not Found', 'This profile does not exist or is not public.'), 404);
@@ -388,6 +435,76 @@ app.get('/user/:slug', async (c) => {
 
   const viewer = c.get('user');
   const isOwner = viewer?.id === (profileUser as any).id;
+
+  const gitData = await (async () => {
+    const canView = (profileUser as any).git_sharing_enabled === 1 || isOwner;
+    if (!canView) return null;
+
+    const userId = (profileUser as any).id;
+    const dates = getLastNDates(28);
+
+    const projectRows = await c.env.DB.prepare(
+      'SELECT id, repo_name, repo_slug, description, description_override FROM git_projects WHERE user_id = ? ORDER BY repo_name'
+    ).bind(userId).all();
+
+  const statsRows = await c.env.DB.prepare(
+    'SELECT project_id, date, SUM(commit_count) as commit_count FROM git_daily_stats WHERE user_id = ? AND date >= ? GROUP BY project_id, date'
+  ).bind(userId, dates[0]).all();
+
+    const usageRows = await c.env.DB.prepare(
+      'SELECT date, COALESCE(SUM(total_tokens), 0) as tokens FROM daily_usage WHERE user_id = ? AND date >= ? GROUP BY date'
+    ).bind(userId, dates[0]).all();
+
+    const usageMap = new Map<string, number>();
+    (usageRows.results || []).forEach((row: any) => usageMap.set(row.date, row.tokens));
+
+    const statsByProject = new Map<string, Map<string, number>>();
+    (statsRows.results || []).forEach((row: any) => {
+      if (!statsByProject.has(row.project_id)) statsByProject.set(row.project_id, new Map());
+      statsByProject.get(row.project_id)!.set(row.date, row.commit_count);
+    });
+
+    const projects = (projectRows.results || []).map((row: any) => {
+      const perDay = dates.map((date) => statsByProject.get(row.id)?.get(date) || 0);
+      const totalCommits = perDay.reduce((s, v) => s + v, 0);
+      const commitsPerDay = totalCommits / dates.length;
+      return {
+        id: row.id,
+        repo_name: row.repo_name,
+        repo_slug: row.repo_slug,
+        description: row.description,
+        description_override: row.description_override,
+        per_day: perDay,
+        total_commits: totalCommits,
+        commits_per_day: commitsPerDay,
+        streak: computeStreak(perDay),
+      };
+    });
+
+    const aggregateSeries = dates.map((date, i) => {
+      let sum = 0;
+      projects.forEach((p) => { sum += p.per_day[i] || 0; });
+      return sum;
+    });
+
+    const avgCommitsPerDay = projects.length > 0
+      ? projects.reduce((s, p) => s + p.commits_per_day, 0) / projects.length
+      : 0;
+
+    return {
+      dates,
+      projects,
+      aggregate: {
+        avg_commits_per_day: avgCommitsPerDay,
+        streak: computeStreak(aggregateSeries),
+        total_commits: aggregateSeries.reduce((s, v) => s + v, 0),
+      },
+      series: {
+        git: aggregateSeries,
+        usage: dates.map((date) => usageMap.get(date) || 0),
+      },
+    };
+  })();
 
   const totalCost = (stats as any)?.total_cost ?? 0;
   const totalTokens = (stats as any)?.total_tokens ?? 0;
@@ -430,10 +547,11 @@ app.get('/user/:slug', async (c) => {
   }
 
   return c.html(profilePage(
-    { display_name: (profileUser as any).display_name, avatar_url: (profileUser as any).avatar_url, share_slug: (profileUser as any).share_slug },
+    { id: (profileUser as any).id, display_name: (profileUser as any).display_name, avatar_url: (profileUser as any).avatar_url, share_slug: (profileUser as any).share_slug },
     statsObj,
     favTools,
     (heatmapRows.results || []).map((r: any) => ({ date: r.date, cost: r.cost, tokens: r.tokens, sessions: r.sessions })),
+    gitData,
     isOwner,
     viewer
   ));
@@ -598,7 +716,16 @@ app.get('/settings', async (c) => {
   if (authErr) return authErr;
   const user = c.get('user')!;
   const shareUrl = user.sharing_enabled && user.share_slug ? `https://ccrank.dev/card/${user.share_slug}` : null;
-  return c.html(settingsPage(user, shareUrl));
+  const [tokens, gitProjects] = await Promise.all([
+    c.env.DB.prepare(
+      'SELECT id, token_prefix, created_at, last_used_at FROM api_tokens WHERE user_id = ? AND revoked_at IS NULL ORDER BY created_at DESC'
+    ).bind(user.id).all(),
+    c.env.DB.prepare(
+      'SELECT id, repo_name, repo_slug, description, description_override FROM git_projects WHERE user_id = ? ORDER BY repo_name'
+    ).bind(user.id).all(),
+  ]);
+
+  return c.html(settingsPage(user, shareUrl, (tokens.results || []) as any[], (gitProjects.results || []) as any[]));
 });
 
 app.post('/api/settings/sharing', async (c) => {
@@ -648,6 +775,70 @@ app.post('/api/settings/sharing', async (c) => {
     ok: true,
     shareUrl: enabled && slug ? `https://ccrank.dev/card/${slug}` : null,
   });
+});
+
+app.post('/api/settings/git-sharing', async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  let body: { enabled: boolean };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'Invalid request' }, 400);
+  }
+
+  const enabled = body.enabled ? 1 : 0;
+  await c.env.DB.prepare(
+    'UPDATE users SET git_sharing_enabled = ? WHERE id = ?'
+  ).bind(enabled, user.id).run();
+
+  return c.json({ ok: true });
+});
+
+app.get('/api/tokens', async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  const tokens = await c.env.DB.prepare(
+    'SELECT id, token_prefix, created_at, last_used_at FROM api_tokens WHERE user_id = ? AND revoked_at IS NULL ORDER BY created_at DESC'
+  ).bind(user.id).all();
+
+  return c.json({ ok: true, tokens: tokens.results || [] });
+});
+
+app.post('/api/tokens/create', async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  const token = generateApiToken();
+  const tokenHash = await hashApiToken(token);
+  const tokenPrefix = token.slice(0, 6);
+  const tokenId = generateId();
+
+  await c.env.DB.prepare(
+    'INSERT INTO api_tokens (id, user_id, token_hash, token_prefix) VALUES (?, ?, ?, ?)'
+  ).bind(tokenId, user.id, tokenHash, tokenPrefix).run();
+
+  return c.json({ ok: true, id: tokenId, token, token_prefix: tokenPrefix });
+});
+
+app.post('/api/tokens/revoke', async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  let body: { id: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'Invalid request' }, 400);
+  }
+
+  await c.env.DB.prepare(
+    'UPDATE api_tokens SET revoked_at = datetime(\'now\') WHERE id = ? AND user_id = ?'
+  ).bind(body.id, user.id).run();
+
+  return c.json({ ok: true });
 });
 
 // ─── Auth Routes ────────────────────────────────────────────────────────────────
@@ -783,10 +974,10 @@ app.get('/auth/logout', (c) => {
 // ─── API Routes ─────────────────────────────────────────────────────────────────
 
 app.post('/api/upload', async (c) => {
-  const user = c.get('user');
-  if (!user) {
-    return c.json({ ok: false, error: 'Unauthorized' }, 401);
-  }
+  const sessionUser = c.get('user');
+  const tokenUser = sessionUser ? null : await getTokenUser(c);
+  const user = sessionUser || tokenUser;
+  if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 
   let body: { json: string; source?: string };
   try {
@@ -856,6 +1047,146 @@ app.post('/api/upload', async (c) => {
     type: report.type,
     summary: report.summary,
   });
+});
+
+app.post('/api/git/upload', async (c) => {
+  const sessionUser = c.get('user');
+  const tokenUser = sessionUser ? null : await getTokenUser(c);
+  const user = sessionUser || tokenUser;
+  if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  let body: {
+    machine?: string;
+    projects: {
+      repoName: string;
+      repoSlug: string;
+      description: string;
+      descriptionOverride?: boolean;
+      days: { date: string; commitCount: number }[];
+    }[];
+  };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'Invalid request body' }, 400);
+  }
+
+  if (!Array.isArray(body.projects) || body.projects.length === 0) {
+    return c.json({ ok: false, error: 'Missing projects' }, 400);
+  }
+  if (body.projects.length > 20) {
+    return c.json({ ok: false, error: 'Too many projects (max 20)' }, 400);
+  }
+
+  const dates = getLastNDates(28);
+  const oldestDate = dates[0];
+  const machine = sanitizeSource(body.machine);
+
+  for (const project of body.projects) {
+    const repoName = String(project.repoName || '').trim().slice(0, 100);
+    const repoSlug = String(project.repoSlug || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 50);
+    const description = String(project.description || '').trim().slice(0, 200);
+    if (!repoName || !repoSlug || !description) {
+      return c.json({ ok: false, error: 'Invalid project fields' }, 400);
+    }
+    if (!Array.isArray(project.days) || project.days.length !== 28) {
+      return c.json({ ok: false, error: 'Each project must include 28 daily entries' }, 400);
+    }
+
+    for (const day of project.days) {
+      if (!isValidDateString(day.date)) {
+        return c.json({ ok: false, error: 'Invalid date in daily series' }, 400);
+      }
+      if (typeof day.commitCount !== 'number' || day.commitCount < 0) {
+        return c.json({ ok: false, error: 'Invalid commit count' }, 400);
+      }
+    }
+
+    let existing = await c.env.DB.prepare(
+      'SELECT id, description_override FROM git_projects WHERE user_id = ? AND repo_slug = ?'
+    ).bind(user.id, repoSlug).first();
+
+    let projectId: string;
+    if (!existing) {
+      projectId = generateId();
+      await c.env.DB.prepare(
+        'INSERT INTO git_projects (id, user_id, repo_name, repo_slug, description, description_override) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(projectId, user.id, repoName, repoSlug, description, project.descriptionOverride ? 1 : 0).run();
+    } else {
+      projectId = (existing as any).id;
+      const override = (existing as any).description_override === 1;
+      if (!override || project.descriptionOverride) {
+        await c.env.DB.prepare(
+          'UPDATE git_projects SET repo_name = ?, description = ?, description_override = ?, updated_at = datetime(\'now\') WHERE id = ?'
+        ).bind(repoName, description, project.descriptionOverride ? 1 : 0, projectId).run();
+      } else {
+        await c.env.DB.prepare(
+          'UPDATE git_projects SET repo_name = ?, updated_at = datetime(\'now\') WHERE id = ?'
+        ).bind(repoName, projectId).run();
+      }
+    }
+
+    const stmt = c.env.DB.prepare(
+      `INSERT INTO git_daily_stats (id, user_id, project_id, date, machine, commit_count)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id, project_id, date, machine) DO UPDATE SET commit_count = excluded.commit_count`
+    );
+
+    const batch = project.days.map((day) =>
+      stmt.bind(generateId(), user.id, projectId, day.date, machine, day.commitCount)
+    );
+
+    await c.env.DB.batch(batch);
+  }
+
+  await c.env.DB.prepare(
+    'DELETE FROM git_daily_stats WHERE user_id = ? AND date < ?'
+  ).bind(user.id, oldestDate).run();
+
+  return c.json({ ok: true, projects: body.projects.length });
+});
+
+app.post('/api/git/projects/update', async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  let body: { projectId: string; description: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'Invalid request' }, 400);
+  }
+
+  const description = String(body.description || '').trim().slice(0, 200);
+  if (!body.projectId || !description) {
+    return c.json({ ok: false, error: 'Missing project or description' }, 400);
+  }
+
+  await c.env.DB.prepare(
+    'UPDATE git_projects SET description = ?, description_override = 1, updated_at = datetime(\'now\') WHERE id = ? AND user_id = ?'
+  ).bind(description, body.projectId, user.id).run();
+
+  return c.json({ ok: true });
+});
+
+app.post('/api/git/feedback', async (c) => {
+  let body: { userId: string; rating: number };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'Invalid request' }, 400);
+  }
+
+  if (!body.userId || (body.rating !== 1 && body.rating !== -1)) {
+    return c.json({ ok: false, error: 'Invalid feedback' }, 400);
+  }
+
+  const viewer = c.get('user');
+  await c.env.DB.prepare(
+    'INSERT INTO git_feedback (id, user_id, viewer_id, rating) VALUES (?, ?, ?, ?)'
+  ).bind(generateId(), body.userId, viewer?.id || null, body.rating).run();
+
+  return c.json({ ok: true });
 });
 
 app.get('/api/leaderboard', async (c) => {
