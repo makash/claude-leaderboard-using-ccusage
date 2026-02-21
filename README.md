@@ -19,8 +19,8 @@ Deploy to Cloudflare Workers in under 10 minutes. Free tier. Zero cost.
 
 <br />
 
-<a href="https://ccrank.dev/leaderboard">
-  <img src="https://ccrank.dev/card/makash/image.svg" alt="Claude Leaderboard Screenshot" width="600" />
+<a href="https://ccrank.dev/leaderboard?sort=output_per_dollar">
+  <img src="docs/images/leaderboard-top10.png" alt="Claude Leaderboard Top 10" width="600" />
 </a>
 
 <br />
