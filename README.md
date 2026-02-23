@@ -132,22 +132,25 @@ Sign in at your leaderboard URL, go to **Install**, generate a token in **Settin
 
 ### Git metadata (optional)
 
-Add git activity to your profile with a local upload:
+Use the Go CLI (binary) to upload git activity. It auto-creates `~/.ccrank/repos.json` and uses it for uploads.
+
+Add a repo (from inside a project folder):
 
 ```bash
-npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN
+ccrank-git --add-repo
 ```
 
-Or run both git + ccusage in one go:
+If you run `--add-repo` outside a repo (e.g., `~/code`), it scans recursively and adds the 30 most recently active repos.
+
+Then upload:
 
 ```bash
-npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN --all
+ccrank-git --url https://your-worker.workers.dev --token YOUR_TOKEN
 ```
 
-Go CLI auto-creates `~/.ccrank/repos.json` and uses it for uploads. Add a repo by running `ccrank-git --add-repo` inside a project folder.
-ccusage runs automatically in the Go CLI. See `docs/git-metadata.md`.
+ccusage runs automatically in the Go CLI. See `docs/git-metadata.md` for OS-specific downloads and details.
 
-Generate your token in **Settings → Git Metadata**. Full details in `docs/git-metadata.md` (includes Go CLI downloads).
+Generate your token in **Settings → Git Metadata**.
 
 ### Invite your team
 

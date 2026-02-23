@@ -9,29 +9,7 @@ This adds a personal, opt-in git activity layer to your profile.
 
 ## Upload git metadata
 
-You can use either the Node script (fastest) or the Go CLI (native binary).
-
-### Node (scripts)
-
-From any git repo you want to track:
-
-```bash
-npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN
-```
-
-Add machine name:
-
-```bash
-npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN --all --machine laptop
-```
-
-Run with ccusage upload too (Node script only):
-
-```bash
-npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN --all
-```
-
-### Go CLI (binary)
+Use the Go CLI (binary). It supports config-based repo discovery and runs ccusage automatically.
 
 Download the latest release:
 
@@ -66,6 +44,26 @@ Populate `~/.ccrank/repos.json` by adding repos from within each project:
 ```
 
 If you run `--add-repo` outside a repo (e.g., a folder like `~/code`), the tool will scan recursively and add the 30 most recently active repos.
+
+### Legacy Node script (optional)
+
+From any git repo you want to track:
+
+```bash
+npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN
+```
+
+Add machine name:
+
+```bash
+npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN --all --machine laptop
+```
+
+Run with ccusage upload too (Node script only):
+
+```bash
+npm run git:upload -- --url https://your-worker.workers.dev --token YOUR_TOKEN --all
+```
 
 Single repo path:
 
