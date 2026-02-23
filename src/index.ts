@@ -1074,8 +1074,8 @@ app.post('/api/git/upload', async (c) => {
   if (!Array.isArray(body.projects) || body.projects.length === 0) {
     return c.json({ ok: false, error: 'Missing projects' }, 400);
   }
-  if (body.projects.length > 20) {
-    return c.json({ ok: false, error: 'Too many projects (max 20)' }, 400);
+  if (body.projects.length > 30) {
+    return c.json({ ok: false, error: 'Too many projects (max 30)' }, 400);
   }
 
   const dates = getLastNDates(28);
