@@ -215,6 +215,7 @@ export function landingPage(topEntries: LeaderboardEntry[]): string {
       <div class="font-semibold ${isFirst ? 'text-xl' : 'text-lg'} mb-1">${e.share_slug
         ? `<a href="/user/${escapeHtml(e.share_slug)}" class="hover:text-purple-300 transition">${escapeHtml(e.display_name)}</a>`
         : escapeHtml(e.display_name)}</div>
+
       <div class="text-xs mb-3" style="color:${title.color}">${title.label}</div>
       <div class="${costSize} font-bold text-purple-400 mb-1">${formatCost(e.total_cost)}</div>
       <div class="text-xs text-gray-500">${formatTokens(e.total_tokens)} tokens &middot; ${e.days_active}d active</div>
@@ -449,8 +450,14 @@ export function dashboardPage(user: User, stats: { total_cost: number; total_tok
   );
 }
 
-export function leaderboardPage(entries: LeaderboardEntry[], user: User | null = null, sort: string = 'cost'): string {
-  const isEfficiencySort = sort !== 'cost';
+export function leaderboardPage(
+  entries: LeaderboardEntry[],
+  user: User | null = null,
+  sort: string = 'cost',
+  view: ViewType | null = null,
+  dateRange: DateRange | null = null
+): string {
+  const isEfficiencySort = sort !== 'cost' && sort !== 'tokens';
 
   const rows = entries
     .map((e) => {
@@ -459,20 +466,24 @@ export function leaderboardPage(entries: LeaderboardEntry[], user: User | null =
       const medal = e.rank === 1 ? '<span class="text-yellow-400 text-lg mr-1">&#x1f947;</span>' : e.rank === 2 ? '<span class="text-gray-300 text-lg mr-1">&#x1f948;</span>' : e.rank === 3 ? '<span class="text-amber-600 text-lg mr-1">&#x1f949;</span>' : '';
       const dimClass = isEfficiencySort && e.rank === 0 ? 'opacity-50' : '';
       const rankDisplay = e.rank === 0 ? '—' : `${medal}${e.rank}`;
-      return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition ${rankClass} ${dimClass}">
+      const profileHref = e.share_slug ? `/user/${escapeHtml(e.share_slug)}` : '#';
+      const clickableClass = e.share_slug ? 'cursor-pointer' : '';
+      const rowClick = e.share_slug ? `onclick="window.location.href='${profileHref}'"` : '';
+      return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition ${rankClass} ${dimClass} ${clickableClass}" ${rowClick}>
         <td class="py-3 px-4 text-center font-mono text-sm">${rankDisplay}</td>
         <td class="py-3 px-4">
           <div class="flex items-center gap-3">
             ${e.avatar_url ? `<img src="${escapeHtml(e.avatar_url)}" class="w-8 h-8 rounded-full" alt="">` : `<div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold">${escapeHtml(e.display_name.charAt(0))}</div>`}
             <div>
               <div class="font-medium">${e.share_slug
-                ? `<a href="/user/${escapeHtml(e.share_slug)}" class="hover:text-purple-400 transition">${escapeHtml(e.display_name)}</a>`
+                ? `<a href="${profileHref}" class="hover:text-purple-400 transition">${escapeHtml(e.display_name)}</a>`
                 : escapeHtml(e.display_name)}</div>
               <div class="text-xs" style="color:${title.color}">${title.label}</div>
             </div>
           </div>
         </td>
         <td class="py-3 px-4 text-right font-mono text-purple-400">${formatCost(e.total_cost)}</td>
+        <td class="py-3 px-4 text-right font-mono text-cyan-400">${formatTokens(e.total_tokens)}</td>
         <td class="py-3 px-4 text-right font-mono text-emerald-400">${formatEfficiency(e.output_per_dollar)} t/$</td>
         <td class="py-3 px-4 text-right font-mono text-blue-400">${formatPercent(e.cache_rate)}</td>
         <td class="py-3 px-4 text-right font-mono text-amber-400">${formatPercent(e.output_ratio)}</td>
@@ -484,14 +495,53 @@ export function leaderboardPage(entries: LeaderboardEntry[], user: User | null =
 
   const sortOptions = [
     { key: 'cost', label: 'Cost' },
+    { key: 'tokens', label: 'Tokens' },
     { key: 'output_per_dollar', label: 'Output/$' },
     { key: 'cache_rate', label: 'Cache Rate' },
     { key: 'output_ratio', label: 'Output Ratio' },
   ];
+
+  // Build sort tab URLs preserving view and date params
+  const viewParams = view ? `&view=${view}${dateRange ? `&date=${dateRange.startDate}` : ''}` : '';
   const tabsHtml = sortOptions.map(s => {
     const isActive = s.key === sort;
-    return `<a href="/leaderboard?sort=${s.key}" class="px-4 py-2 text-sm font-medium rounded-lg transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${s.label}</a>`;
+    return `<a href="/leaderboard?sort=${s.key}${viewParams}" class="px-4 py-2 text-sm font-medium rounded-lg transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${s.label}</a>`;
   }).join('');
+
+  // Time filter tabs (Daily / Weekly / Monthly)
+  const timeViews = (['daily', 'weekly', 'monthly'] as ViewType[]);
+  const timeTabsHtml = [
+    `<a href="/leaderboard?sort=${sort}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${!view ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">All Time</a>`,
+    ...timeViews.map(v => {
+      const isActive = v === view;
+      const label = v.charAt(0).toUpperCase() + v.slice(1);
+      return `<a href="/leaderboard?sort=${sort}&view=${v}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
+    })
+  ].join('');
+
+  // Date navigation (only when a time view is active)
+  let dateNavHtml = '';
+  if (view && dateRange) {
+    const prevHref = `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.prevDate}`;
+    const nextHref = dateRange.isCurrentPeriod ? '#' : `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.nextDate}`;
+    const nextDisabled = dateRange.isCurrentPeriod;
+    dateNavHtml = `<div class="flex items-center justify-between mb-6 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3">
+      <a href="${prevHref}" class="text-gray-400 hover:text-white transition text-sm">&larr; Previous</a>
+      <span class="text-sm font-medium text-gray-200">${escapeHtml(dateRange.label)}</span>
+      ${nextDisabled
+        ? '<span class="text-gray-600 text-sm cursor-not-allowed">Next &rarr;</span>'
+        : `<a href="${nextHref}" class="text-gray-400 hover:text-white transition text-sm">Next &rarr;</a>`
+      }
+    </div>`;
+  }
+
+  const sortDescriptions: Record<string, string> = {
+    cost: 'Who\'s pushing Claude Code the hardest? Ranked by total spend.',
+    tokens: 'Who\'s consuming the most tokens? Ranked by total token usage.',
+    output_per_dollar: 'Who gets the most code written per dollar? Masters of prompting and task scoping.',
+    cache_rate: 'Who reuses context best? High cache rates mean deep, focused work on consistent projects.',
+    output_ratio: 'Who gets the most output per input? Efficient prompters who let Claude do the heavy lifting.',
+  };
 
   return layout(
     'Leaderboard',
@@ -499,24 +549,24 @@ export function leaderboardPage(entries: LeaderboardEntry[], user: User | null =
       <div class="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 class="text-2xl font-bold mb-1">Leaderboard</h1>
-          <p class="text-gray-400">${sort === 'cost'
-            ? 'Who\'s pushing Claude Code the hardest? Ranked by total spend.'
-            : sort === 'output_per_dollar'
-            ? 'Who gets the most code written per dollar? Masters of prompting and task scoping.'
-            : sort === 'cache_rate'
-            ? 'Who reuses context best? High cache rates mean deep, focused work on consistent projects.'
-            : 'Who gets the most output per input? Efficient prompters who let Claude do the heavy lifting.'
-          }</p>
+          <p class="text-gray-400">${sortDescriptions[sort] || sortDescriptions.cost}</p>
           ${isEfficiencySort ? '<p class="text-xs text-gray-600 mt-1">$100 minimum spend + 10 active days to qualify for efficiency rankings.</p>' : ''}
         </div>
-        <div class="flex gap-1">${tabsHtml}</div>
+        <div class="flex gap-1 flex-wrap">${tabsHtml}</div>
       </div>
     </div>
 
+    <!-- Time filter tabs -->
+    <div class="flex gap-2 mb-4">
+      ${timeTabsHtml}
+    </div>
+
+    ${dateNavHtml}
+
     ${entries.length === 0
       ? `<div class="text-center py-20 text-gray-500">
-          <p class="text-lg mb-2">No data yet</p>
-          <p class="text-sm">Be the first to upload a ccusage report!</p>
+          <p class="text-lg mb-2">No data ${view ? 'for this period' : 'yet'}</p>
+          <p class="text-sm">${view ? 'Try navigating to a different date.' : 'Be the first to upload a ccusage report!'}</p>
         </div>`
       : `<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden glow">
         <div class="overflow-x-auto">
@@ -526,6 +576,7 @@ export function leaderboardPage(entries: LeaderboardEntry[], user: User | null =
                 <th class="py-3 px-4 text-center w-16">Rank</th>
                 <th class="py-3 px-4 text-left">User</th>
                 <th class="py-3 px-4 text-right">Cost</th>
+                <th class="py-3 px-4 text-right">Tokens</th>
                 <th class="py-3 px-4 text-right">Output/$</th>
                 <th class="py-3 px-4 text-right">Cache Rate</th>
                 <th class="py-3 px-4 text-right">Output %</th>
@@ -981,14 +1032,17 @@ export function historyPage(
         const title = getTitle(e.total_cost);
         const rankClass = e.rank <= 3 ? `rank-${e.rank}` : '';
         const medal = e.rank === 1 ? '<span class="text-yellow-400 mr-1">&#x1f947;</span>' : e.rank === 2 ? '<span class="text-gray-300 mr-1">&#x1f948;</span>' : e.rank === 3 ? '<span class="text-amber-600 mr-1">&#x1f949;</span>' : '';
-        return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition ${rankClass}">
+        const profileHref = e.share_slug ? `/user/${escapeHtml(e.share_slug)}` : '#';
+        const clickableClass = e.share_slug ? 'cursor-pointer' : '';
+        const rowClick = e.share_slug ? `onclick="window.location.href='${profileHref}'"` : '';
+        return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition ${rankClass} ${clickableClass}" ${rowClick}>
           <td class="py-3 px-4 text-center font-mono text-sm">${medal}${e.rank}</td>
           <td class="py-3 px-4">
             <div class="flex items-center gap-3">
               ${e.avatar_url ? `<img src="${escapeHtml(e.avatar_url)}" class="w-8 h-8 rounded-full" alt="">` : `<div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold">${escapeHtml(e.display_name.charAt(0))}</div>`}
               <div>
                 <div class="font-medium">${e.share_slug
-                  ? `<a href="/user/${escapeHtml(e.share_slug)}" class="hover:text-purple-400 transition">${escapeHtml(e.display_name)}</a>`
+                  ? `<a href="${profileHref}" class="hover:text-purple-400 transition">${escapeHtml(e.display_name)}</a>`
                   : escapeHtml(e.display_name)}</div>
                 <div class="text-xs" style="color:${title.color}">${title.label}</div>
               </div>
