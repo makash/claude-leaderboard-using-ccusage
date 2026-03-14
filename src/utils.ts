@@ -33,7 +33,7 @@ export interface LeaderboardEntry {
   meets_efficiency_threshold: boolean;
 }
 
-export type SortKey = 'cost' | 'output_per_dollar' | 'cache_rate' | 'output_ratio';
+export type SortKey = 'cost' | 'tokens' | 'output_per_dollar' | 'cache_rate' | 'output_ratio';
 
 export type ViewType = 'daily' | 'weekly' | 'monthly';
 

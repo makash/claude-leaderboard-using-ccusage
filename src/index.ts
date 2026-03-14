@@ -174,7 +174,7 @@ app.get('/history', async (c) => {
     `SELECT
       u.display_name,
       u.avatar_url,
-      CASE WHEN u.sharing_enabled = 1 THEN u.share_slug ELSE NULL END as share_slug,
+      COALESCE(u.share_slug, LOWER(REPLACE(REPLACE(u.display_name, ' ', '-'), '.', ''))) as share_slug,
       COALESCE(SUM(d.cost_usd), 0) as total_cost,
       COALESCE(SUM(d.total_tokens), 0) as total_tokens,
       COALESCE(SUM(d.output_tokens), 0) as total_output_tokens,
@@ -220,7 +220,7 @@ app.get('/', async (c) => {
       `SELECT
         u.display_name,
         u.avatar_url,
-        CASE WHEN u.sharing_enabled = 1 THEN u.share_slug ELSE NULL END as share_slug,
+        COALESCE(u.share_slug, LOWER(REPLACE(REPLACE(u.display_name, ' ', '-'), '.', ''))) as share_slug,
         COALESCE(SUM(d.cost_usd), 0) as total_cost,
         COALESCE(SUM(d.total_tokens), 0) as total_tokens,
         COALESCE(SUM(d.output_tokens), 0) as total_output_tokens,
@@ -291,13 +291,27 @@ app.get('/', async (c) => {
 app.get('/leaderboard', async (c) => {
   const user = c.get('user');
   const sortParam = c.req.query('sort') || 'cost';
-  const sort = ['cost', 'output_per_dollar', 'cache_rate', 'output_ratio'].includes(sortParam) ? sortParam : 'cost';
+  const sort = ['cost', 'tokens', 'output_per_dollar', 'cache_rate', 'output_ratio'].includes(sortParam) ? sortParam : 'cost';
 
-  const results = await c.env.DB.prepare(
-    `SELECT
+  // Time filter support (like history page)
+  const viewParam = c.req.query('view') || '';
+  const view: ViewType | null = isValidView(viewParam) ? viewParam : null;
+
+  let dateRange: ReturnType<typeof getDateRange> | null = null;
+  let dateBindings: string[] = [];
+
+  if (view) {
+    const today = new Date().toISOString().slice(0, 10);
+    const dateParam = c.req.query('date') || today;
+    const dateStr = isValidDateString(dateParam) ? dateParam : today;
+    dateRange = getDateRange(view, dateStr);
+    dateBindings = [dateRange.startDate, dateRange.endDate];
+  }
+
+  const query = `SELECT
       u.display_name,
       u.avatar_url,
-      CASE WHEN u.sharing_enabled = 1 THEN u.share_slug ELSE NULL END as share_slug,
+      COALESCE(u.share_slug, LOWER(REPLACE(REPLACE(u.display_name, ' ', '-'), '.', ''))) as share_slug,
       COALESCE(SUM(d.cost_usd), 0) as total_cost,
       COALESCE(SUM(d.total_tokens), 0) as total_tokens,
       COALESCE(SUM(d.output_tokens), 0) as total_output_tokens,
@@ -314,11 +328,16 @@ app.get('/leaderboard', async (c) => {
         THEN CAST(COALESCE(SUM(d.output_tokens), 0) AS REAL) / (COALESCE(SUM(d.total_tokens), 0) - COALESCE(SUM(d.cache_read_tokens), 0))
         ELSE 0 END as output_ratio
     FROM users u
-    LEFT JOIN daily_usage d ON u.id = d.user_id
+    JOIN daily_usage d ON u.id = d.user_id
+    ${dateBindings.length > 0 ? `WHERE d.date >= ? AND d.date <= ?` : ''}
     GROUP BY u.id
     HAVING total_cost > 0
-    ORDER BY total_cost DESC`
-  ).all();
+    ORDER BY total_cost DESC`;
+
+  const stmt = c.env.DB.prepare(query);
+  const results = dateBindings.length > 0
+    ? await stmt.bind(...dateBindings).all()
+    : await stmt.all();
 
   const allRows = (results.results || []).map((row: any) => ({
     display_name: row.display_name,
@@ -338,6 +357,9 @@ app.get('/leaderboard', async (c) => {
   let entries;
   if (sort === 'cost') {
     entries = allRows.map((row: any, i: number) => ({ ...row, rank: i + 1 }));
+  } else if (sort === 'tokens') {
+    const sorted = [...allRows].sort((a: any, b: any) => b.total_tokens - a.total_tokens);
+    entries = sorted.map((row: any, i: number) => ({ ...row, rank: i + 1 }));
   } else {
     const qualified = allRows.filter((r: any) => r.meets_efficiency_threshold);
     const unqualified = allRows.filter((r: any) => !r.meets_efficiency_threshold);
@@ -348,7 +370,7 @@ app.get('/leaderboard', async (c) => {
     ];
   }
 
-  return c.html(leaderboardPage(entries, user, sort));
+  return c.html(leaderboardPage(entries, user, sort, view, dateRange));
 });
 
 app.get('/upload', (c) => {
@@ -405,11 +427,23 @@ app.get('/admin', async (c) => {
 
 app.get('/user/:slug', async (c) => {
   const slug = c.req.param('slug');
-  const profileUser = await c.env.DB.prepare(
-    'SELECT id, display_name, avatar_url, share_slug, fav_tools, git_sharing_enabled FROM users WHERE share_slug = ? AND sharing_enabled = 1'
+  // First try to find by share_slug (for users who have set a custom slug)
+  let profileUser = await c.env.DB.prepare(
+    'SELECT id, display_name, avatar_url, share_slug, sharing_enabled, fav_tools FROM users WHERE share_slug = ?'
   ).bind(slug).first();
 
-  if (!profileUser) return c.html(errorPage('Not Found', 'This profile does not exist or is not public.'), 404);
+  // If not found by share_slug, try to find by auto-generated slug from display_name
+  if (!profileUser) {
+    const allUsers = await c.env.DB.prepare(
+      'SELECT id, display_name, avatar_url, share_slug, sharing_enabled, fav_tools FROM users'
+    ).all();
+    profileUser = (allUsers.results || []).find((u: any) => {
+      const autoSlug = u.display_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      return autoSlug === slug;
+    }) || null;
+  }
+
+  if (!profileUser) return c.html(errorPage('Not Found', 'This profile does not exist.'), 404);
 
   const stats = await c.env.DB.prepare(
     `SELECT COALESCE(SUM(cost_usd), 0) as total_cost, COALESCE(SUM(total_tokens), 0) as total_tokens,
@@ -525,8 +559,11 @@ app.get('/user/:slug', async (c) => {
     meets_efficiency_threshold: totalCost >= 100 && daysActive >= 10,
   };
 
-  // Fire-and-forget: generate full card SVG and upload to Sirv for PNG OG image
-  if (c.env.SIRV_CLIENT_ID) {
+  const isSharingEnabled = (profileUser as any).sharing_enabled === 1;
+  const effectiveSlug = (profileUser as any).share_slug || slug;
+
+  // Fire-and-forget: generate full card SVG and upload to Sirv for PNG OG image (only for sharing-enabled users)
+  if (isSharingEnabled && c.env.SIRV_CLIENT_ID) {
     const cardData: CardData = {
       displayName: (profileUser as any).display_name,
       avatarUrl: (profileUser as any).avatar_url,
@@ -541,15 +578,15 @@ app.get('/user/:slug', async (c) => {
     };
     c.executionCtx.waitUntil(
       generateCardSvg(cardData, 'full')
-        .then(svg => uploadCardSvg(slug, svg, c.env.SIRV_CLIENT_ID, c.env.SIRV_CLIENT_SECRET))
+        .then(svg => uploadCardSvg(effectiveSlug, svg, c.env.SIRV_CLIENT_ID, c.env.SIRV_CLIENT_SECRET))
         .catch(() => {})
     );
   }
 
   return c.html(profilePage(
-    { id: (profileUser as any).id, display_name: (profileUser as any).display_name, avatar_url: (profileUser as any).avatar_url, share_slug: (profileUser as any).share_slug },
+    { display_name: (profileUser as any).display_name, avatar_url: (profileUser as any).avatar_url, share_slug: effectiveSlug },
     statsObj,
-    favTools,
+    isSharingEnabled ? favTools : [],
     (heatmapRows.results || []).map((r: any) => ({ date: r.date, cost: r.cost, tokens: r.tokens, sessions: r.sessions })),
     gitData,
     isOwner,
