@@ -168,6 +168,11 @@ app.get('/history', async (c) => {
   const dateParam = c.req.query('date') || today;
   const dateStr = isValidDateString(dateParam) ? dateParam : today;
 
+  // Platform filter
+  const platformParam = c.req.query('platform') || '';
+  const historyPlatform: string | null = (platformParam === 'claude' || platformParam === 'codex') ? platformParam : null;
+  const histPlatformClause = historyPlatform ? `AND COALESCE(d.platform, 'claude') = '${historyPlatform}'` : '';
+
   const dateRange = getDateRange(view, dateStr);
 
   const results = await c.env.DB.prepare(
@@ -182,7 +187,7 @@ app.get('/history', async (c) => {
       MAX(d.date) as last_active
     FROM users u
     JOIN daily_usage d ON u.id = d.user_id
-    WHERE d.date >= ? AND d.date <= ?
+    WHERE d.date >= ? AND d.date <= ? ${histPlatformClause}
     GROUP BY u.id
     HAVING total_cost > 0
     ORDER BY total_cost DESC
@@ -203,7 +208,7 @@ app.get('/history', async (c) => {
     last_active: row.last_active,
   }));
 
-  return c.html(historyPage(view, dateRange, entries, user));
+  return c.html(historyPage(view, dateRange, entries, user, historyPlatform));
 });
 
 app.get('/login', (c) => {

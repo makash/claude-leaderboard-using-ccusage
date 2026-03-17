@@ -1108,13 +1108,26 @@ export function historyPage(
   view: ViewType,
   dateRange: DateRange,
   entries: LeaderboardEntry[],
-  user: User | null = null
+  user: User | null = null,
+  platform: string | null = null
 ): string {
+  const histPlatformParam = platform ? `&platform=${platform}` : '';
   const tabs = (['daily', 'weekly', 'monthly'] as ViewType[]).map(v => {
     const isActive = v === view;
     const label = v.charAt(0).toUpperCase() + v.slice(1);
-    const href = `/history?view=${v}`;
+    const href = `/history?view=${v}${histPlatformParam}`;
     return `<a href="${href}" class="px-4 py-2 text-sm font-medium rounded-lg transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
+  }).join('');
+
+  // Platform filter tabs
+  const histPlatformTabs = [
+    { key: null, label: 'All' },
+    { key: 'claude', label: 'Claude' },
+    { key: 'codex', label: 'Codex' },
+  ].map(p => {
+    const isActive = p.key === platform;
+    const href = p.key ? `/history?view=${view}&platform=${p.key}` : `/history?view=${view}`;
+    return `<a href="${href}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${p.label}</a>`;
   }).join('');
 
   const rows = entries.length > 0
@@ -1145,8 +1158,8 @@ export function historyPage(
       }).join('')
     : '';
 
-  const prevHref = `/history?view=${view}&date=${dateRange.prevDate}`;
-  const nextHref = dateRange.isCurrentPeriod ? '#' : `/history?view=${view}&date=${dateRange.nextDate}`;
+  const prevHref = `/history?view=${view}&date=${dateRange.prevDate}${histPlatformParam}`;
+  const nextHref = dateRange.isCurrentPeriod ? '#' : `/history?view=${view}&date=${dateRange.nextDate}${histPlatformParam}`;
   const nextDisabled = dateRange.isCurrentPeriod;
 
   return layout(
@@ -1158,8 +1171,10 @@ export function historyPage(
       </div>
 
       <!-- Tabs -->
-      <div class="flex gap-2 mb-6">
-        ${tabs}
+      <div class="flex items-center gap-4 mb-6 flex-wrap">
+        <div class="flex gap-2">${tabs}</div>
+        <div class="h-4 w-px bg-gray-700"></div>
+        <div class="flex gap-2">${histPlatformTabs}</div>
       </div>
 
       <!-- Date navigation -->
