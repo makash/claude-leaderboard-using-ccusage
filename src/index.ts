@@ -540,6 +540,26 @@ app.get('/user/:slug', async (c) => {
     };
   })();
 
+  // Platform breakdown stats
+  const platformStats = await c.env.DB.prepare(
+    `SELECT COALESCE(platform, 'claude') as platform,
+     COALESCE(SUM(cost_usd), 0) as total_cost, COALESCE(SUM(total_tokens), 0) as total_tokens,
+     COALESCE(SUM(output_tokens), 0) as total_output_tokens, COALESCE(SUM(cache_read_tokens), 0) as total_cache_read,
+     COUNT(DISTINCT date) as days_active, MAX(date) as last_active
+     FROM daily_usage WHERE user_id = ? GROUP BY COALESCE(platform, 'claude')`
+  ).bind((profileUser as any).id).all();
+
+  const platformBreakdown: Record<string, { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number; last_active: string | null }> = {};
+  for (const row of (platformStats.results || []) as any[]) {
+    platformBreakdown[row.platform] = {
+      total_cost: row.total_cost,
+      total_tokens: row.total_tokens,
+      total_output_tokens: row.total_output_tokens,
+      days_active: row.days_active,
+      last_active: row.last_active,
+    };
+  }
+
   const totalCost = (stats as any)?.total_cost ?? 0;
   const totalTokens = (stats as any)?.total_tokens ?? 0;
   const totalOutputTokens = (stats as any)?.total_output_tokens ?? 0;
@@ -557,6 +577,7 @@ app.get('/user/:slug', async (c) => {
     cache_rate: totalTokens > 0 ? totalCacheRead / totalTokens : 0,
     output_ratio: (totalTokens - totalCacheRead) > 0 ? totalOutputTokens / (totalTokens - totalCacheRead) : 0,
     meets_efficiency_threshold: totalCost >= 100 && daysActive >= 10,
+    platformBreakdown,
   };
 
   const isSharingEnabled = (profileUser as any).sharing_enabled === 1;
