@@ -113,9 +113,9 @@ function layout(title: string, content: string, user: User | null = null, ogOver
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)} | ccrank.dev</title>
   <meta name="author" content="Akash Mahajan">
-  <meta name="description" content="Install the ccrank CLI to track your Claude Code usage and see where you rank.">
+  <meta name="description" content="Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.">
   <meta property="og:title" content="${escapeHtml(title)} | ccrank.dev">
-  <meta property="og:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Install the ccrank CLI to track your Claude Code usage and see where you rank.'}">
+  <meta property="og:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.'}">
   <meta property="og:type" content="website">
   <meta property="og:image" content="${ogOverrides?.image || 'https://imgs.kloudle.com/kloudle-customer-logos/ccrank-dev/ccrank-open-graph-image.webp'}">
   <meta property="og:image:width" content="1200">
@@ -123,7 +123,7 @@ function layout(title: string, content: string, user: User | null = null, ogOver
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:creator" content="@makash">
   <meta name="twitter:title" content="${escapeHtml(title)} | ccrank.dev">
-  <meta name="twitter:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Install the ccrank CLI to track your Claude Code usage and see where you rank.'}">
+  <meta name="twitter:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.'}">
   <meta name="twitter:image" content="${ogOverrides?.image || 'https://imgs.kloudle.com/kloudle-customer-logos/ccrank-dev/ccrank-open-graph-image.webp'}">
   <meta property="og:site_name" content="ccrank.dev">
   <meta property="og:url" content="https://ccrank.dev/">
@@ -134,7 +134,7 @@ function layout(title: string, content: string, user: User | null = null, ogOver
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Claude Leaderboard",
-    "description": "Install the ccrank CLI to track your Claude Code usage and see where you rank.",
+    "description": "Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.",
     "url": "https://ccrank.dev/",
     "applicationCategory": "DeveloperApplication",
     "creator": {
@@ -287,7 +287,7 @@ export function landingPage(topEntries: LeaderboardEntry[]): string {
           ccrank.dev
         </h1>
         <p class="text-xl text-gray-400 max-w-lg mx-auto leading-relaxed">
-          Track Claude usage. Benchmark your leverage.
+          Track Claude & Codex usage. Benchmark your leverage.
         </p>
         <p class="text-xs text-gray-500 mt-2">by <a href="https://x.com/makash?utm_source=ccrank&utm_medium=web&utm_campaign=hero" target="_blank" rel="noopener" class="text-gray-400 hover:text-gray-300 transition">@makash</a></p>
       </div>
@@ -436,7 +436,7 @@ export function dashboardPage(user: User, stats: { total_cost: number; total_tok
     ${user.invites_remaining > 0 ? `
     <div class="bg-purple-900/20 border border-purple-800/30 rounded-xl p-5 flex items-center justify-between">
       <div>
-        <p class="text-sm font-medium text-gray-200">Know someone who uses Claude Code?</p>
+        <p class="text-sm font-medium text-gray-200">Know someone who uses Claude Code or Codex?</p>
         <p class="text-xs text-gray-400 mt-1">You have <span class="text-purple-400 font-semibold">${user.invites_remaining} invite${user.invites_remaining > 1 ? 's' : ''}</span> to share. The leaderboard is more fun with friends.</p>
       </div>
       <a href="/invites" class="flex-shrink-0 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition ml-4">
@@ -554,7 +554,7 @@ export function leaderboardPage(
   }
 
   const sortDescriptions: Record<string, string> = {
-    cost: 'Who\'s pushing Claude Code the hardest? Ranked by total spend.',
+    cost: 'Who\'s pushing Claude Code & Codex the hardest? Ranked by total spend.',
     tokens: 'Who\'s consuming the most tokens? Ranked by total token usage.',
     output_per_dollar: 'Who gets the most code written per dollar? Masters of prompting and task scoping.',
     cache_rate: 'Who reuses context best? High cache rates mean deep, focused work on consistent projects.',
@@ -713,15 +713,35 @@ export function uploadPage(user: User, message: { type: 'success' | 'error'; tex
         <p class="text-sm text-gray-400">Add <code class="bg-gray-800 px-1 rounded">--machine laptop</code> so each device stays separate.</p>
       </div>
 
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+        <h2 class="text-sm font-semibold text-gray-200 mb-2">Using OpenAI Codex CLI?</h2>
+        <p class="text-sm text-gray-400 mb-3">ccrank also supports Codex CLI usage data. Use <code class="bg-gray-800 px-1.5 py-0.5 rounded">@ccusage/codex</code> to generate your report:</p>
+        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">Command</span>
+            <button class="text-xs text-purple-300 hover:text-purple-200 transition" data-copy="npx @ccusage/codex@latest daily --json">Copy</button>
+          </div>
+          <code class="text-xs text-gray-300">npx @ccusage/codex@latest daily --json</code>
+        </div>
+        <p class="text-xs text-gray-500 mt-3">Same upload process &mdash; paste the JSON output or upload the file. Works with GPT-5, codex-mini, and all Codex models.</p>
+      </div>
+
       <div class="bg-gray-900/60 border border-gray-800/60 rounded-xl p-6">
         <h2 class="text-sm font-semibold text-gray-200 mb-2">Troubleshooting</h2>
         <p class="text-sm text-gray-400">No Node installed? We recommend <a href="https://mise.jdx.dev" target="_blank" rel="noopener" class="text-purple-300 hover:text-purple-200 transition">mise</a>. Then run:</p>
         <div class="bg-gray-950 border border-gray-800 rounded-lg p-3 mt-3">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs text-gray-500">Command</span>
+            <span class="text-xs text-gray-500">Claude Code</span>
             <button class="text-xs text-purple-300 hover:text-purple-200 transition" data-copy="npx ccusage@latest daily --json">Copy</button>
           </div>
           <code class="text-xs text-gray-300">npx ccusage@latest daily --json</code>
+        </div>
+        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3 mt-2">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">Codex CLI</span>
+            <button class="text-xs text-purple-300 hover:text-purple-200 transition" data-copy="npx @ccusage/codex@latest daily --json">Copy</button>
+          </div>
+          <code class="text-xs text-gray-300">npx @ccusage/codex@latest daily --json</code>
         </div>
       </div>
     </div>
@@ -923,7 +943,7 @@ export function aboutPage(user: User | null = null): string {
       <p class="text-gray-400 mb-10">How a WhatsApp message became a live leaderboard in minutes.</p>
 
       <p class="text-gray-400 mb-8 text-lg leading-relaxed">
-        ccrank.dev is an open-source developer ranking platform for Claude Code usage.
+        ccrank.dev is an open-source developer ranking platform for Claude Code & Codex CLI usage.
         Track, compare, and compete on your team's AI-assisted development metrics.
       </p>
 
@@ -971,9 +991,9 @@ export function aboutPage(user: User | null = null): string {
       <section class="mb-10">
         <h2 class="text-xl font-bold mb-4 text-yellow-400">What This Leaderboard Is For</h2>
         <ul class="text-gray-300 space-y-2">
-          <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Track your Claude Code usage across days and weeks</li>
+          <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Track your Claude Code & Codex CLI usage across days and weeks</li>
           <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Friendly competition &mdash; who&rsquo;s the biggest Claude power user?</li>
-          <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Cost awareness &mdash; see what Claude Code actually costs</li>
+          <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Cost awareness &mdash; see what Claude Code & Codex actually costs</li>
           <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Fun titles &mdash; from Apprentice to Claude Maximalist</li>
         </ul>
       </section>
@@ -1005,7 +1025,7 @@ export function aboutPage(user: User | null = null): string {
             <div class="text-sm font-semibold text-white mb-1">Powered by ccusage</div>
             <p class="text-sm text-gray-400">
               <a href="https://github.com/ryoppippi/ccusage?utm_source=claude-leaderboard&utm_medium=web&utm_campaign=about" target="_blank" rel="noopener" class="text-purple-400 hover:text-purple-300 transition">ccusage</a>
-              by <strong class="text-gray-300">ryoppippi</strong> &mdash; the CLI tool that makes Claude Code usage tracking possible.
+              by <strong class="text-gray-300">ryoppippi</strong> &mdash; the CLI tool that makes Claude Code & Codex usage tracking possible.
               Without it, there&rsquo;d be no data to leaderboard.
             </p>
           </div>
@@ -1140,7 +1160,7 @@ export function cardPage(
   const rankColor = stats.rank === 1 ? '#eab308' : stats.rank === 2 ? '#9ca3af' : stats.rank === 3 ? '#b45309' : '#7c3aed';
   const cardUrl = `https://ccrank.dev/card/${escapeHtml(cardUser.share_slug)}`;
   const imageUrl = `https://ccrank.dev/card/${escapeHtml(cardUser.share_slug)}/image.png`;
-  const tweetText = encodeURIComponent(`I'm ranked ${rankLabel} on the Claude Code Leaderboard with ${formatCost(stats.total_cost)} spent! Check your ranking at ccrank.dev`);
+  const tweetText = encodeURIComponent(`I'm ranked ${rankLabel} on the ccrank.dev Leaderboard with ${formatCost(stats.total_cost)} spent! Check your ranking at ccrank.dev`);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1148,7 +1168,7 @@ export function cardPage(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(cardUser.display_name)}'s Claude Stats - ccrank.dev</title>
-  <meta property="og:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code Leaderboard | ccrank.dev">
+  <meta property="og:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code & Codex Leaderboard | ccrank.dev">
   <meta property="og:description" content="${title.label} with ${formatCost(stats.total_cost)} spent on Claude Code. ${stats.days_active} days active. ccrank.dev is the leaderboard for Claude Code power users.">
   <meta property="og:image" content="${imageUrl}">
   <meta property="og:image:width" content="1200">
@@ -1156,7 +1176,7 @@ export function cardPage(
   <meta property="og:url" content="${cardUrl}">
   <meta property="og:type" content="profile">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code Leaderboard | ccrank.dev">
+  <meta name="twitter:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code & Codex Leaderboard | ccrank.dev">
   <meta name="twitter:description" content="${title.label} with ${formatCost(stats.total_cost)} spent. ${stats.days_active} days active. ccrank.dev is the leaderboard for Claude Code power users.">
   <meta name="twitter:image" content="${imageUrl}">
   <meta name="twitter:creator" content="@makash">
@@ -1220,7 +1240,7 @@ export function cardPage(
     <!-- Footer -->
     <div class="px-8 py-4 bg-gray-800/50 border-t border-gray-800 flex items-center justify-between">
       <span class="text-sm text-gray-400">ccrank.dev</span>
-      <span class="text-xs text-gray-600">Claude Code Leaderboard</span>
+      <span class="text-xs text-gray-600">Claude Code & Codex Leaderboard</span>
     </div>
   </div>
 

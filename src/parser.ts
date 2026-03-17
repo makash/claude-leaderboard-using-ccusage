@@ -1,13 +1,16 @@
 /**
  * ccusage JSON report parser
  *
- * Handles multiple report formats from ccusage:
+ * Handles multiple report formats from ccusage and @ccusage/codex:
  * - daily: { type: "daily", data: [...], summary: {...} }
  * - weekly: { type: "weekly", data: [...], summary: {...} }
  * - session: { type: "session", data: [...], summary: {...} }
  *
  * Also handles older formats where field names differ
  * (e.g., totalCost vs costUSD vs totalCostUSD)
+ *
+ * Works with both Claude Code (ccusage) and OpenAI Codex CLI (@ccusage/codex)
+ * as they share the same JSON output format.
  */
 
 export interface DailyEntry {
@@ -106,11 +109,11 @@ export function parseReport(jsonStr: string): ParsedReport {
   try {
     data = JSON.parse(jsonStr);
   } catch {
-    throw new Error('Invalid JSON. Please paste the output of `npx ccusage@latest daily --json`.');
+    throw new Error('Invalid JSON. Please paste the output of `npx ccusage@latest daily --json` or `npx @ccusage/codex@latest daily --json`.');
   }
 
   if (!data || typeof data !== 'object') {
-    throw new Error('Expected a JSON object. Please paste the output of `npx ccusage@latest daily --json`.');
+    throw new Error('Expected a JSON object. Please paste the output of `npx ccusage@latest daily --json` or `npx @ccusage/codex@latest daily --json`.');
   }
 
   const report = data as Record<string, unknown>;
