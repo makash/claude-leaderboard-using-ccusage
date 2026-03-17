@@ -316,6 +316,11 @@ app.get('/leaderboard', async (c) => {
   const viewParam = c.req.query('view') || '';
   const view: ViewType | null = isValidView(viewParam) ? viewParam : null;
 
+  // Platform filter (all / claude / codex)
+  const platformParam = c.req.query('platform') || '';
+  const platform: string | null = (platformParam === 'claude' || platformParam === 'codex') ? platformParam : null;
+  const platformClause = platform ? `AND COALESCE(d.platform, 'claude') = '${platform}'` : '';
+
   let dateRange: ReturnType<typeof getDateRange> | null = null;
   let dateBindings: string[] = [];
 
@@ -326,6 +331,11 @@ app.get('/leaderboard', async (c) => {
     dateRange = getDateRange(view, dateStr);
     dateBindings = [dateRange.startDate, dateRange.endDate];
   }
+
+  const whereClauses: string[] = [];
+  if (dateBindings.length > 0) whereClauses.push('d.date >= ? AND d.date <= ?');
+  if (platformClause) whereClauses.push(`COALESCE(d.platform, 'claude') = '${platform}'`);
+  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
   const query = `SELECT
       u.display_name,
@@ -348,7 +358,7 @@ app.get('/leaderboard', async (c) => {
         ELSE 0 END as output_ratio
     FROM users u
     JOIN daily_usage d ON u.id = d.user_id
-    ${dateBindings.length > 0 ? `WHERE d.date >= ? AND d.date <= ?` : ''}
+    ${whereSQL}
     GROUP BY u.id
     HAVING total_cost > 0
     ORDER BY total_cost DESC`;
@@ -389,7 +399,7 @@ app.get('/leaderboard', async (c) => {
     ];
   }
 
-  return c.html(leaderboardPage(entries, user, sort, view, dateRange));
+  return c.html(leaderboardPage(entries, user, sort, view, dateRange, platform));
 });
 
 app.get('/upload', (c) => {

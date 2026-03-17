@@ -505,7 +505,8 @@ export function leaderboardPage(
   user: User | null = null,
   sort: string = 'cost',
   view: ViewType | null = null,
-  dateRange: DateRange | null = null
+  dateRange: DateRange | null = null,
+  platform: string | null = null
 ): string {
   const isEfficiencySort = sort !== 'cost' && sort !== 'tokens';
 
@@ -551,29 +552,43 @@ export function leaderboardPage(
     { key: 'output_ratio', label: 'Output Ratio' },
   ];
 
-  // Build sort tab URLs preserving view and date params
+  // Build shared URL params
+  const platformParam = platform ? `&platform=${platform}` : '';
   const viewParams = view ? `&view=${view}${dateRange ? `&date=${dateRange.startDate}` : ''}` : '';
+
+  // Sort tabs
   const tabsHtml = sortOptions.map(s => {
     const isActive = s.key === sort;
-    return `<a href="/leaderboard?sort=${s.key}${viewParams}" class="px-4 py-2 text-sm font-medium rounded-lg transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${s.label}</a>`;
+    return `<a href="/leaderboard?sort=${s.key}${viewParams}${platformParam}" class="px-4 py-2 text-sm font-medium rounded-lg transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${s.label}</a>`;
   }).join('');
 
   // Time filter tabs (Daily / Weekly / Monthly)
   const timeViews = (['daily', 'weekly', 'monthly'] as ViewType[]);
   const timeTabsHtml = [
-    `<a href="/leaderboard?sort=${sort}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${!view ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">All Time</a>`,
+    `<a href="/leaderboard?sort=${sort}${platformParam}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${!view ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">All Time</a>`,
     ...timeViews.map(v => {
       const isActive = v === view;
       const label = v.charAt(0).toUpperCase() + v.slice(1);
-      return `<a href="/leaderboard?sort=${sort}&view=${v}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
+      return `<a href="/leaderboard?sort=${sort}&view=${v}${platformParam}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
     })
   ].join('');
+
+  // Platform filter tabs (All / Claude / Codex)
+  const platformTabsHtml = [
+    { key: null, label: 'All' },
+    { key: 'claude', label: 'Claude' },
+    { key: 'codex', label: 'Codex' },
+  ].map(p => {
+    const isActive = p.key === platform;
+    const href = p.key ? `/leaderboard?sort=${sort}${viewParams}&platform=${p.key}` : `/leaderboard?sort=${sort}${viewParams}`;
+    return `<a href="${href}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${p.label}</a>`;
+  }).join('');
 
   // Date navigation (only when a time view is active)
   let dateNavHtml = '';
   if (view && dateRange) {
-    const prevHref = `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.prevDate}`;
-    const nextHref = dateRange.isCurrentPeriod ? '#' : `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.nextDate}`;
+    const prevHref = `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.prevDate}${platformParam}`;
+    const nextHref = dateRange.isCurrentPeriod ? '#' : `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.nextDate}${platformParam}`;
     const nextDisabled = dateRange.isCurrentPeriod;
     dateNavHtml = `<div class="flex items-center justify-between mb-6 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3">
       <a href="${prevHref}" class="text-gray-400 hover:text-white transition text-sm">&larr; Previous</a>
@@ -607,8 +622,10 @@ export function leaderboardPage(
     </div>
 
     <!-- Time filter tabs -->
-    <div class="flex gap-2 mb-4">
-      ${timeTabsHtml}
+    <div class="flex items-center gap-4 mb-4 flex-wrap">
+      <div class="flex gap-2">${timeTabsHtml}</div>
+      <div class="h-4 w-px bg-gray-700"></div>
+      <div class="flex gap-2">${platformTabsHtml}</div>
     </div>
 
     ${dateNavHtml}
