@@ -1742,6 +1742,7 @@ export function profilePage(
     cache_rate: number;
     output_ratio: number;
     meets_efficiency_threshold: boolean;
+    platformBreakdown?: Record<string, { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number; last_active: string | null }>;
   },
   favTools: string[],
   heatmapData: { date: string; cost: number; tokens: number; sessions: number }[],
@@ -1931,6 +1932,68 @@ export function profilePage(
         <div class="text-xl font-bold text-amber-400">${formatPercent(stats.output_ratio)}</div>
       </div>
     </div>` : ''}
+
+    <!-- Platform Breakdown -->
+    ${(() => {
+      const pb = stats.platformBreakdown;
+      if (!pb || Object.keys(pb).length <= 1) return '';
+      const claude = pb['claude'];
+      const codex = pb['codex'];
+      if (!claude && !codex) return '';
+      return `<div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8">
+        <h2 class="text-lg font-semibold mb-4">Platform Breakdown</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          ${claude ? `<div class="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+              <span class="text-sm font-semibold text-purple-300">Claude Code</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              ${isOwner ? `<div>
+                <div class="text-xs text-gray-500">Cost</div>
+                <div class="text-lg font-bold text-purple-400">${formatCost(claude.total_cost)}</div>
+              </div>` : ''}
+              <div>
+                <div class="text-xs text-gray-500">Tokens</div>
+                <div class="text-lg font-bold text-cyan-400">${formatTokens(claude.total_tokens)}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">Output</div>
+                <div class="text-lg font-bold text-green-400">${formatTokens(claude.total_output_tokens)}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">Days</div>
+                <div class="text-lg font-bold text-yellow-400">${claude.days_active}</div>
+              </div>
+            </div>
+          </div>` : ''}
+          ${codex ? `<div class="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span class="text-sm font-semibold text-emerald-300">Codex CLI</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              ${isOwner ? `<div>
+                <div class="text-xs text-gray-500">Cost</div>
+                <div class="text-lg font-bold text-purple-400">${formatCost(codex.total_cost)}</div>
+              </div>` : ''}
+              <div>
+                <div class="text-xs text-gray-500">Tokens</div>
+                <div class="text-lg font-bold text-cyan-400">${formatTokens(codex.total_tokens)}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">Output</div>
+                <div class="text-lg font-bold text-green-400">${formatTokens(codex.total_output_tokens)}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">Days</div>
+                <div class="text-lg font-bold text-yellow-400">${codex.days_active}</div>
+              </div>
+            </div>
+          </div>` : ''}
+        </div>
+      </div>`;
+    })()}
 
     ${gitHtml}
 
