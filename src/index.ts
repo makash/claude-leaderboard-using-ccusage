@@ -352,6 +352,7 @@ app.get('/leaderboard', async (c) => {
       COALESCE(SUM(d.cache_read_tokens), 0) as total_cache_read,
       COUNT(DISTINCT d.date) as days_active,
       MAX(d.date) as last_active,
+      GROUP_CONCAT(DISTINCT COALESCE(d.platform, 'claude')) as platforms,
       CASE WHEN COALESCE(SUM(d.cost_usd), 0) > 0
         THEN COALESCE(SUM(d.output_tokens), 0) / COALESCE(SUM(d.cost_usd), 1)
         ELSE 0 END as output_per_dollar,
@@ -386,6 +387,7 @@ app.get('/leaderboard', async (c) => {
     cache_rate: row.cache_rate,
     output_ratio: row.output_ratio,
     meets_efficiency_threshold: row.total_cost >= 100 && row.days_active >= 10,
+    platforms: row.platforms ? String(row.platforms).split(',') : ['claude'],
   }));
 
   let entries;

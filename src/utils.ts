@@ -31,6 +31,7 @@ export interface LeaderboardEntry {
   cache_rate: number;
   output_ratio: number;
   meets_efficiency_threshold: boolean;
+  platforms?: string[];
 }
 
 export type SortKey = 'cost' | 'tokens' | 'output_per_dollar' | 'cache_rate' | 'output_ratio';

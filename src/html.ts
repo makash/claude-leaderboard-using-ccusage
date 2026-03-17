@@ -529,7 +529,11 @@ export function leaderboardPage(
               <div class="font-medium">${e.share_slug
                 ? `<a href="${profileHref}" class="hover:text-purple-400 transition">${escapeHtml(e.display_name)}</a>`
                 : escapeHtml(e.display_name)}</div>
-              <div class="text-xs" style="color:${title.color}">${title.label}</div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs" style="color:${title.color}">${title.label}</span>
+                ${(e.platforms || []).includes('claude') ? '<span class="w-1.5 h-1.5 rounded-full bg-purple-400" title="Claude Code"></span>' : ''}
+                ${(e.platforms || []).includes('codex') ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Codex CLI"></span>' : ''}
+              </div>
             </div>
           </div>
         </td>
