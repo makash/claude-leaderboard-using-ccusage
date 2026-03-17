@@ -71,12 +71,12 @@ function num(val: unknown): number {
 }
 
 export function detectPlatform(models: string[]): Platform {
-  const codexPatterns = ['gpt-', 'codex-', 'o1-', 'o3-', 'o4-'];
+  const codexPrefixes = ['gpt-', 'codex-', 'o1-', 'o3-', 'o4-', 'o1', 'o3', 'o4'];
+  const codexContains = ['codex', 'openai'];
   for (const model of models) {
     const lower = model.toLowerCase();
-    if (codexPatterns.some(p => lower.startsWith(p))) {
-      return 'codex';
-    }
+    if (codexPrefixes.some(p => lower.startsWith(p))) return 'codex';
+    if (codexContains.some(p => lower.includes(p))) return 'codex';
   }
   return 'claude';
 }
