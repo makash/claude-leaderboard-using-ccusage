@@ -672,7 +672,7 @@ func gitRemoteURL(repoPath string) string {
 }
 
 func printOnboardingMessage() {
-	fmt.Println("Welcome to ccrank git uploads.")
+	fmt.Println("Welcome to ccrank — track your Claude Code & Codex CLI usage.")
 	fmt.Println("We created ~/.ccrank/repos.json to store the repos you want to upload.")
 	fmt.Println("")
 	fmt.Println("To add a single repo, run this inside a project folder:")
@@ -681,5 +681,6 @@ func printOnboardingMessage() {
 	fmt.Println("To add many repos at once, run this in a folder like ~/code:")
 	fmt.Println("  ccrank-git --add-repo")
 	fmt.Println("It will scan recursively and add the 30 most recently active repos.")
-	fmt.Println("Note: ccrank currently supports up to 30 repos.")
+	fmt.Println("")
+	fmt.Println("Usage data from both Claude Code and Codex CLI is uploaded automatically.")
 }
