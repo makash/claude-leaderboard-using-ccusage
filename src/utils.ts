@@ -35,6 +35,8 @@ export interface LeaderboardEntry {
 
 export type SortKey = 'cost' | 'tokens' | 'output_per_dollar' | 'cache_rate' | 'output_ratio';
 
+export type Platform = 'claude' | 'codex';
+
 export type ViewType = 'daily' | 'weekly' | 'monthly';
 
 export interface DateRange {
