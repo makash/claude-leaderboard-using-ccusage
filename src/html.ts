@@ -1201,7 +1201,7 @@ export function cardPage(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(cardUser.display_name)}'s Claude Stats - ccrank.dev</title>
   <meta property="og:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code & Codex Leaderboard | ccrank.dev">
-  <meta property="og:description" content="${title.label} with ${formatCost(stats.total_cost)} spent on Claude Code. ${stats.days_active} days active. ccrank.dev is the leaderboard for Claude Code power users.">
+  <meta property="og:description" content="${title.label} with ${formatCost(stats.total_cost)} spent on AI coding tools. ${stats.days_active} days active. ccrank.dev is the leaderboard for AI coding power users.">
   <meta property="og:image" content="${imageUrl}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -1209,7 +1209,7 @@ export function cardPage(
   <meta property="og:type" content="profile">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code & Codex Leaderboard | ccrank.dev">
-  <meta name="twitter:description" content="${title.label} with ${formatCost(stats.total_cost)} spent. ${stats.days_active} days active. ccrank.dev is the leaderboard for Claude Code power users.">
+  <meta name="twitter:description" content="${title.label} with ${formatCost(stats.total_cost)} spent. ${stats.days_active} days active. ccrank.dev is the leaderboard for AI coding power users.">
   <meta name="twitter:image" content="${imageUrl}">
   <meta name="twitter:creator" content="@makash">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -2100,7 +2100,7 @@ export function profilePage(
   })();
   </script>`;
 
-  const ogDesc = `${title.label} ranked #${stats.rank} on ccrank.dev. ${stats.days_active} days active, ${formatTokens(stats.total_tokens)} tokens. ccrank.dev is the leaderboard for Claude Code power users.`;
+  const ogDesc = `${title.label} ranked #${stats.rank} on ccrank.dev. ${stats.days_active} days active, ${formatTokens(stats.total_tokens)} tokens. ccrank.dev is the leaderboard for AI coding power users.`;
 
   const ogImage = `https://ccrank.dev/card/${profileUser.share_slug}/image.png`;
   return layout('Profile - ' + profileUser.display_name, content, viewer, { image: ogImage, description: ogDesc });
