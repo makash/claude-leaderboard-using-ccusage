@@ -112,28 +112,30 @@ func main() {
 	fmt.Println("Upload complete")
 
 	// Upload Claude Code usage (ccusage)
+	fmt.Println("Checking Claude Code usage...")
 	report, err := runCcusage()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "ccusage (Claude Code) skipped:", err.Error())
+		fmt.Fprintln(os.Stderr, "  Claude Code: skipped -", err.Error())
 	} else {
 		err = uploadCcusage(*urlFlag, *tokenFlag, report, machine)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "ccusage upload failed:", err.Error())
+			fmt.Fprintln(os.Stderr, "  Claude Code: upload failed -", err.Error())
 		} else {
-			fmt.Println("ccusage (Claude Code) upload complete")
+			fmt.Println("  Claude Code: upload complete")
 		}
 	}
 
 	// Upload Codex CLI usage (@ccusage/codex)
+	fmt.Println("Checking Codex CLI usage...")
 	codexReport, codexErr := runCcusageCodex()
 	if codexErr != nil {
-		fmt.Fprintln(os.Stderr, "ccusage (Codex CLI) skipped:", codexErr.Error())
+		fmt.Fprintln(os.Stderr, "  Codex CLI: skipped -", codexErr.Error())
 	} else {
 		codexErr = uploadCcusage(*urlFlag, *tokenFlag, codexReport, machine)
 		if codexErr != nil {
-			fmt.Fprintln(os.Stderr, "ccusage (Codex CLI) upload failed:", codexErr.Error())
+			fmt.Fprintln(os.Stderr, "  Codex CLI: upload failed -", codexErr.Error())
 		} else {
-			fmt.Println("ccusage (Codex CLI) upload complete")
+			fmt.Println("  Codex CLI: upload complete")
 		}
 	}
 
