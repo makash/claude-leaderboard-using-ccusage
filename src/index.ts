@@ -1278,6 +1278,10 @@ app.post('/api/git/feedback', async (c) => {
 });
 
 app.get('/api/leaderboard', async (c) => {
+  const platformFilter = c.req.query('platform');
+  const validPlatform = platformFilter === 'claude' || platformFilter === 'codex' ? platformFilter : null;
+  const platformClause = validPlatform ? `AND COALESCE(d.platform, 'claude') = '${validPlatform}'` : '';
+
   const results = await c.env.DB.prepare(
     `SELECT
       u.id,
@@ -1300,7 +1304,7 @@ app.get('/api/leaderboard', async (c) => {
         THEN CAST(COALESCE(SUM(d.output_tokens), 0) AS REAL) / (COALESCE(SUM(d.total_tokens), 0) - COALESCE(SUM(d.cache_read_tokens), 0))
         ELSE 0 END as output_ratio
     FROM users u
-    LEFT JOIN daily_usage d ON u.id = d.user_id
+    LEFT JOIN daily_usage d ON u.id = d.user_id ${platformClause}
     GROUP BY u.id
     HAVING total_cost > 0
     ORDER BY total_cost DESC`
