@@ -117,7 +117,7 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "  Claude Code: skipped -", err.Error())
 	} else {
-		err = uploadCcusage(*urlFlag, *tokenFlag, report, machine)
+		err = uploadCcusage(*urlFlag, *tokenFlag, report, machine, "claude")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "  Claude Code: upload failed -", err.Error())
 		} else {
@@ -131,7 +131,7 @@ func main() {
 	if codexErr != nil {
 		fmt.Fprintln(os.Stderr, "  Codex CLI: skipped -", codexErr.Error())
 	} else {
-		codexErr = uploadCcusage(*urlFlag, *tokenFlag, codexReport, machine)
+		codexErr = uploadCcusage(*urlFlag, *tokenFlag, codexReport, machine, "codex")
 		if codexErr != nil {
 			fmt.Fprintln(os.Stderr, "  Codex CLI: upload failed -", codexErr.Error())
 		} else {
@@ -286,7 +286,7 @@ func printCcusageHelp() {
 	fmt.Fprintln(os.Stderr, "     Codex CLI:   npx @ccusage/codex@latest daily --json")
 }
 
-func uploadCcusage(baseURL, token, report, machine string) error {
+func uploadCcusage(baseURL, token, report, machine, platform string) error {
 	baseURL = strings.TrimRight(baseURL, "/")
 	endpoint := baseURL + "/api/upload"
 
@@ -295,8 +295,9 @@ func uploadCcusage(baseURL, token, report, machine string) error {
 		source = "default"
 	}
 	payload := map[string]any{
-		"json":   report,
-		"source": source,
+		"json":     report,
+		"source":   source,
+		"platform": platform,
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {

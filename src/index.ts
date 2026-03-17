@@ -1056,7 +1056,7 @@ app.post('/api/upload', async (c) => {
   const user = sessionUser || tokenUser;
   if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 
-  let body: { json: string; source?: string };
+  let body: { json: string; source?: string; platform?: string };
   try {
     body = await c.req.json();
   } catch {
@@ -1074,6 +1074,15 @@ app.post('/api/upload', async (c) => {
     report = parseReport(body.json);
   } catch (err: any) {
     return c.json({ ok: false, error: err.message }, 400);
+  }
+
+  // Allow explicit platform override from CLI (e.g., ccrank-git sends platform)
+  const platformOverride = body.platform === 'codex' ? 'codex' : body.platform === 'claude' ? 'claude' : null;
+  if (platformOverride) {
+    report.platform = platformOverride;
+    for (const entry of report.entries) {
+      entry.platform = platformOverride;
+    }
   }
 
   // Create upload record
