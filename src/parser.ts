@@ -13,6 +13,8 @@
  * as they share the same JSON output format.
  */
 
+export type Platform = 'claude' | 'codex';
+
 export interface DailyEntry {
   date: string;
   inputTokens: number;
@@ -22,11 +24,13 @@ export interface DailyEntry {
   totalTokens: number;
   costUsd: number;
   modelsUsed: string[];
+  platform: Platform;
 }
 
 export interface ParsedReport {
   type: 'daily' | 'weekly' | 'session';
   entries: DailyEntry[];
+  platform: Platform;
   summary: {
     totalInputTokens: number;
     totalOutputTokens: number;
@@ -66,6 +70,17 @@ function num(val: unknown): number {
   return typeof val === 'number' ? val : 0;
 }
 
+export function detectPlatform(models: string[]): Platform {
+  const codexPatterns = ['gpt-', 'codex-', 'o1-', 'o3-', 'o4-'];
+  for (const model of models) {
+    const lower = model.toLowerCase();
+    if (codexPatterns.some(p => lower.startsWith(p))) {
+      return 'codex';
+    }
+  }
+  return 'claude';
+}
+
 function normalizeDate(dateStr: string, type: string, index: number): string {
   // For daily reports, the date should already be YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
@@ -81,6 +96,7 @@ function normalizeDate(dateStr: string, type: string, index: number): string {
 
 function parseDataEntry(entry: Record<string, unknown>, type: string, index: number): DailyEntry {
   const dateField = entry.date || entry.week || entry.month || entry.sessionId || `${type}-${index}`;
+  const models = extractModels(entry);
   return {
     date: normalizeDate(String(dateField), type, index),
     inputTokens: num(entry.inputTokens),
@@ -89,7 +105,8 @@ function parseDataEntry(entry: Record<string, unknown>, type: string, index: num
     cacheReadTokens: num(entry.cacheReadTokens),
     totalTokens: num(entry.totalTokens),
     costUsd: extractCost(entry),
-    modelsUsed: extractModels(entry),
+    modelsUsed: models,
+    platform: detectPlatform(models),
   };
 }
 
@@ -191,8 +208,11 @@ export function parseReport(jsonStr: string): ParsedReport {
         byDate.set(lastActivity, parsed);
       }
     }
-    return { type, entries: Array.from(byDate.values()), summary };
+    const sessionEntries = Array.from(byDate.values());
+    const reportPlatform = detectPlatform(sessionEntries.flatMap(e => e.modelsUsed));
+    return { type, entries: sessionEntries, platform: reportPlatform, summary };
   }
 
-  return { type, entries: parsedEntries, summary };
+  const reportPlatform = detectPlatform(parsedEntries.flatMap(e => e.modelsUsed));
+  return { type, entries: parsedEntries, platform: reportPlatform, summary };
 }
