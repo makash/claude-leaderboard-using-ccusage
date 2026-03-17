@@ -276,6 +276,24 @@ app.get('/', async (c) => {
     .bind(user.id)
     .first();
 
+  // Platform breakdown for dashboard
+  const dashPlatformStats = await c.env.DB.prepare(
+    `SELECT COALESCE(platform, 'claude') as platform,
+     COALESCE(SUM(cost_usd), 0) as total_cost, COALESCE(SUM(total_tokens), 0) as total_tokens,
+     COALESCE(SUM(output_tokens), 0) as total_output_tokens, COUNT(DISTINCT date) as days_active
+     FROM daily_usage WHERE user_id = ? GROUP BY COALESCE(platform, 'claude')`
+  ).bind(user.id).all();
+
+  const dashPlatformBreakdown: Record<string, { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number }> = {};
+  for (const row of (dashPlatformStats.results || []) as any[]) {
+    dashPlatformBreakdown[row.platform] = {
+      total_cost: row.total_cost,
+      total_tokens: row.total_tokens,
+      total_output_tokens: row.total_output_tokens,
+      days_active: row.days_active,
+    };
+  }
+
   return c.html(
     dashboardPage(user, {
       total_cost: (stats as any)?.total_cost ?? 0,
@@ -284,6 +302,7 @@ app.get('/', async (c) => {
       days_active: (stats as any)?.days_active ?? 0,
       rank: (rankResult as any)?.rank ?? 0,
       upload_count: (uploadCount as any)?.cnt ?? 0,
+      platformBreakdown: dashPlatformBreakdown,
     })
   );
 });

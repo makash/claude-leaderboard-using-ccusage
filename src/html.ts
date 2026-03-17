@@ -392,7 +392,7 @@ export function loginPage(): string {
   );
 }
 
-export function dashboardPage(user: User, stats: { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number; rank: number; upload_count: number }): string {
+export function dashboardPage(user: User, stats: { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number; rank: number; upload_count: number; platformBreakdown?: Record<string, { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number }> }): string {
   const title = getTitle(stats.total_cost);
   return layout(
     'Dashboard',
@@ -422,6 +422,38 @@ export function dashboardPage(user: User, stats: { total_cost: number; total_tok
         <div class="text-2xl font-bold text-yellow-400">${stats.days_active}</div>
       </div>
     </div>
+
+    ${(() => {
+      const pb = stats.platformBreakdown;
+      if (!pb || Object.keys(pb).length <= 1) return '';
+      const claude = pb['claude'];
+      const codex = pb['codex'];
+      if (!claude && !codex) return '';
+      return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        ${claude ? `<div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+            <span class="text-sm font-medium text-purple-300">Claude Code</span>
+          </div>
+          <div class="flex gap-6">
+            <div><div class="text-xs text-gray-500">Cost</div><div class="text-lg font-bold text-purple-400">${formatCost(claude.total_cost)}</div></div>
+            <div><div class="text-xs text-gray-500">Tokens</div><div class="text-lg font-bold text-cyan-400">${formatTokens(claude.total_tokens)}</div></div>
+            <div><div class="text-xs text-gray-500">Days</div><div class="text-lg font-bold text-yellow-400">${claude.days_active}</div></div>
+          </div>
+        </div>` : ''}
+        ${codex ? `<div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-sm font-medium text-emerald-300">Codex CLI</span>
+          </div>
+          <div class="flex gap-6">
+            <div><div class="text-xs text-gray-500">Cost</div><div class="text-lg font-bold text-purple-400">${formatCost(codex.total_cost)}</div></div>
+            <div><div class="text-xs text-gray-500">Tokens</div><div class="text-lg font-bold text-cyan-400">${formatTokens(codex.total_tokens)}</div></div>
+            <div><div class="text-xs text-gray-500">Days</div><div class="text-lg font-bold text-yellow-400">${codex.days_active}</div></div>
+          </div>
+        </div>` : ''}
+      </div>`;
+    })()}
 
     <div class="flex gap-4 mb-8">
       <a href="/upload" class="bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg px-6 py-3 transition">
