@@ -133,7 +133,7 @@ function layout(title: string, content: string, user: User | null = null, ogOver
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "Claude Leaderboard",
+    "name": "Claude & Codex Leaderboard",
     "description": "Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.",
     "url": "https://ccrank.dev/",
     "applicationCategory": "DeveloperApplication",
@@ -481,7 +481,7 @@ export function dashboardPage(user: User, stats: { total_cost: number; total_tok
     <div class="bg-cyan-900/20 border border-cyan-800/30 rounded-xl p-5 flex items-center justify-between mt-4">
       <div>
         <p class="text-sm font-medium text-gray-200">Share your stats card</p>
-        <p class="text-xs text-gray-400 mt-1">Show off your Claude Code usage on Twitter/LinkedIn</p>
+        <p class="text-xs text-gray-400 mt-1">Show off your usage stats on Twitter/LinkedIn</p>
       </div>
       <a href="/card/${escapeHtml(user.share_slug)}" class="flex-shrink-0 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition ml-4">
         View Card
@@ -1245,7 +1245,7 @@ export function cardPage(
       <!-- Main stat -->
       <div class="mb-6">
         <div class="text-5xl font-bold text-purple-400">${formatCost(stats.total_cost)}</div>
-        <div class="text-sm text-gray-500 mt-1">total spent on Claude Code</div>
+        <div class="text-sm text-gray-500 mt-1">total spent on AI coding tools</div>
       </div>
 
       <!-- Stats grid -->
@@ -1306,7 +1306,7 @@ export function cardPage(
 
   <!-- CTA for viewers -->
   <div class="mt-8 text-center">
-    <p class="text-sm text-gray-500 mb-2">Track your own Claude Code usage</p>
+    <p class="text-sm text-gray-500 mb-2">Track your own Claude Code & Codex usage</p>
     <a href="/" class="text-purple-400 hover:text-purple-300 font-medium transition">Join at ccrank.dev</a>
   </div>
 
@@ -1395,7 +1395,7 @@ export function settingsPage(
       <!-- Sharing Section -->
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
         <h2 class="text-lg font-semibold mb-4">Social Stats Card</h2>
-        <p class="text-sm text-gray-400 mb-4">Share your Claude Code usage ranking as a beautiful card on Twitter/LinkedIn.</p>
+        <p class="text-sm text-gray-400 mb-4">Share your usage ranking as a beautiful card on Twitter/LinkedIn.</p>
 
         <form id="sharing-form" class="space-y-4">
           <div class="flex items-center justify-between">
@@ -1441,7 +1441,7 @@ export function settingsPage(
       <!-- Favorite Tools Section -->
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
         <h2 class="text-lg font-semibold mb-2">Favorite Tools</h2>
-        <p class="text-sm text-gray-400 mb-4">What are the Claude Code plugins or skills you can't live without? (shown on your profile)</p>
+        <p class="text-sm text-gray-400 mb-4">What are the AI coding tools or plugins you can't live without? (shown on your profile)</p>
         <div class="space-y-3">
           <input type="text" id="fav-tool-1" value="${escapeHtml(favTools[0] || '')}"
             placeholder="e.g. playwright MCP"
@@ -1830,7 +1830,7 @@ export function profilePage(
   if (stats.total_tokens > 0) {
     let tweetText = `I'm ranked #${stats.rank} on ccrank.dev!`;
     if (favTools.length > 0) {
-      tweetText += '\n\nMy go-to Claude Code tools:';
+      tweetText += '\n\nMy go-to AI coding tools:';
       favTools.forEach(t => { tweetText += `\n- ${t}`; });
     }
     tweetText += `\n\nCheck your ranking: ccrank.dev/card/${profileUser.share_slug}`;
@@ -1894,7 +1894,7 @@ export function profilePage(
           ${gitTrend}
         </div>
         <div>
-          <div class="text-xs text-gray-400 mb-2">Claude usage (tokens)</div>
+          <div class="text-xs text-gray-400 mb-2">AI usage (tokens)</div>
           ${usageTrend}
         </div>
       </div>
