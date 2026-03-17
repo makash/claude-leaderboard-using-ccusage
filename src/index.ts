@@ -1123,6 +1123,7 @@ app.post('/api/upload', async (c) => {
     ok: true,
     entries: report.entries.length,
     type: report.type,
+    platform: report.platform,
     summary: report.summary,
   });
 });
