@@ -626,10 +626,14 @@ export function leaderboardPage(
     </div>
 
     <!-- Time filter tabs -->
-    <div class="flex items-center gap-4 mb-4 flex-wrap">
+    <div class="flex items-center gap-4 mb-2 flex-wrap">
       <div class="flex gap-2">${timeTabsHtml}</div>
       <div class="h-4 w-px bg-gray-700"></div>
       <div class="flex gap-2">${platformTabsHtml}</div>
+    </div>
+    <div class="flex items-center gap-3 mb-4 text-xs text-gray-600">
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span> Claude</span>
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Codex</span>
     </div>
 
     ${dateNavHtml}
