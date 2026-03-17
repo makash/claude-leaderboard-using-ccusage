@@ -1361,6 +1361,24 @@ app.get('/api/me', async (c) => {
     .bind(user.id)
     .first();
 
+  // Platform breakdown
+  const mePlatformStats = await c.env.DB.prepare(
+    `SELECT COALESCE(platform, 'claude') as platform,
+     COALESCE(SUM(cost_usd), 0) as total_cost, COALESCE(SUM(total_tokens), 0) as total_tokens,
+     COALESCE(SUM(output_tokens), 0) as total_output_tokens, COUNT(DISTINCT date) as days_active
+     FROM daily_usage WHERE user_id = ? GROUP BY COALESCE(platform, 'claude')`
+  ).bind(user.id).all();
+
+  const mePlatformBreakdown: Record<string, any> = {};
+  for (const row of (mePlatformStats.results || []) as any[]) {
+    mePlatformBreakdown[row.platform] = {
+      total_cost: row.total_cost,
+      total_tokens: row.total_tokens,
+      total_output_tokens: row.total_output_tokens,
+      days_active: row.days_active,
+    };
+  }
+
   return c.json({
     ok: true,
     user: {
@@ -1369,6 +1387,7 @@ app.get('/api/me', async (c) => {
       avatar_url: user.avatar_url,
     },
     stats,
+    platformBreakdown: mePlatformBreakdown,
   });
 });
 
