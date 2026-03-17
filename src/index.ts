@@ -1044,11 +1044,11 @@ app.post('/api/upload', async (c) => {
     .bind(uploadId, user.id, report.type, report.entries.length)
     .run();
 
-  // Upsert daily usage entries (source tracking for multi-machine support)
+  // Upsert daily usage entries (source + platform tracking)
   const stmt = c.env.DB.prepare(
-    `INSERT INTO daily_usage (id, upload_id, user_id, date, source, input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, total_tokens, cost_usd, models_used)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(user_id, date, source) DO UPDATE SET
+    `INSERT INTO daily_usage (id, upload_id, user_id, date, source, platform, input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, total_tokens, cost_usd, models_used)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, date, source, platform) DO UPDATE SET
        upload_id = excluded.upload_id,
        input_tokens = excluded.input_tokens,
        output_tokens = excluded.output_tokens,
@@ -1066,6 +1066,7 @@ app.post('/api/upload', async (c) => {
       user.id,
       entry.date,
       source,
+      entry.platform,
       entry.inputTokens,
       entry.outputTokens,
       entry.cacheCreationTokens,
