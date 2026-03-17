@@ -71,7 +71,7 @@ function num(val: unknown): number {
 }
 
 export function detectPlatform(models: string[]): Platform {
-  const codexPrefixes = ['gpt-', 'codex-', 'o1-', 'o3-', 'o4-', 'o1', 'o3', 'o4'];
+  const codexPrefixes = ['gpt-', 'codex-', 'o1-', 'o3-', 'o4-'];
   const codexContains = ['codex', 'openai'];
   for (const model of models) {
     const lower = model.toLowerCase();

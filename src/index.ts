@@ -171,9 +171,15 @@ app.get('/history', async (c) => {
   // Platform filter
   const platformParam = c.req.query('platform') || '';
   const historyPlatform: string | null = (platformParam === 'claude' || platformParam === 'codex') ? platformParam : null;
-  const histPlatformClause = historyPlatform ? `AND COALESCE(d.platform, 'claude') = '${historyPlatform}'` : '';
 
   const dateRange = getDateRange(view, dateStr);
+
+  const histBindings: (string)[] = [dateRange.startDate, dateRange.endDate];
+  let histPlatformSQL = '';
+  if (historyPlatform) {
+    histPlatformSQL = 'AND COALESCE(d.platform, ?) = ?';
+    histBindings.push('claude', historyPlatform);
+  }
 
   const results = await c.env.DB.prepare(
     `SELECT
@@ -187,13 +193,13 @@ app.get('/history', async (c) => {
       MAX(d.date) as last_active
     FROM users u
     JOIN daily_usage d ON u.id = d.user_id
-    WHERE d.date >= ? AND d.date <= ? ${histPlatformClause}
+    WHERE d.date >= ? AND d.date <= ? ${histPlatformSQL}
     GROUP BY u.id
     HAVING total_cost > 0
     ORDER BY total_cost DESC
     LIMIT 10`
   )
-    .bind(dateRange.startDate, dateRange.endDate)
+    .bind(...histBindings)
     .all();
 
   const entries = (results.results || []).map((row: any, i: number) => ({
@@ -324,22 +330,24 @@ app.get('/leaderboard', async (c) => {
   // Platform filter (all / claude / codex)
   const platformParam = c.req.query('platform') || '';
   const platform: string | null = (platformParam === 'claude' || platformParam === 'codex') ? platformParam : null;
-  const platformClause = platform ? `AND COALESCE(d.platform, 'claude') = '${platform}'` : '';
 
   let dateRange: ReturnType<typeof getDateRange> | null = null;
-  let dateBindings: string[] = [];
+  let lbBindings: string[] = [];
 
   if (view) {
     const today = new Date().toISOString().slice(0, 10);
     const dateParam = c.req.query('date') || today;
     const dateStr = isValidDateString(dateParam) ? dateParam : today;
     dateRange = getDateRange(view, dateStr);
-    dateBindings = [dateRange.startDate, dateRange.endDate];
+    lbBindings = [dateRange.startDate, dateRange.endDate];
   }
 
   const whereClauses: string[] = [];
-  if (dateBindings.length > 0) whereClauses.push('d.date >= ? AND d.date <= ?');
-  if (platformClause) whereClauses.push(`COALESCE(d.platform, 'claude') = '${platform}'`);
+  if (lbBindings.length > 0) whereClauses.push('d.date >= ? AND d.date <= ?');
+  if (platform) {
+    whereClauses.push('COALESCE(d.platform, ?) = ?');
+    lbBindings.push('claude', platform);
+  }
   const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
   const query = `SELECT
@@ -370,8 +378,8 @@ app.get('/leaderboard', async (c) => {
     ORDER BY total_cost DESC`;
 
   const stmt = c.env.DB.prepare(query);
-  const results = dateBindings.length > 0
-    ? await stmt.bind(...dateBindings).all()
+  const results = lbBindings.length > 0
+    ? await stmt.bind(...lbBindings).all()
     : await stmt.all();
 
   const allRows = (results.results || []).map((row: any) => ({
@@ -1297,9 +1305,15 @@ app.post('/api/git/feedback', async (c) => {
 app.get('/api/leaderboard', async (c) => {
   const platformFilter = c.req.query('platform');
   const validPlatform = platformFilter === 'claude' || platformFilter === 'codex' ? platformFilter : null;
-  const platformClause = validPlatform ? `AND COALESCE(d.platform, 'claude') = '${validPlatform}'` : '';
 
-  const results = await c.env.DB.prepare(
+  const apiLbBindings: string[] = [];
+  let apiPlatformSQL = '';
+  if (validPlatform) {
+    apiPlatformSQL = 'WHERE COALESCE(d.platform, ?) = ?';
+    apiLbBindings.push('claude', validPlatform);
+  }
+
+  const apiLbStmt = c.env.DB.prepare(
     `SELECT
       u.id,
       u.display_name,
@@ -1322,11 +1336,16 @@ app.get('/api/leaderboard', async (c) => {
         THEN CAST(COALESCE(SUM(d.output_tokens), 0) AS REAL) / (COALESCE(SUM(d.total_tokens), 0) - COALESCE(SUM(d.cache_read_tokens), 0))
         ELSE 0 END as output_ratio
     FROM users u
-    LEFT JOIN daily_usage d ON u.id = d.user_id ${platformClause}
+    LEFT JOIN daily_usage d ON u.id = d.user_id
+    ${apiPlatformSQL}
     GROUP BY u.id
     HAVING total_cost > 0
     ORDER BY total_cost DESC`
-  ).all();
+  );
+
+  const results = apiLbBindings.length > 0
+    ? await apiLbStmt.bind(...apiLbBindings).all()
+    : await apiLbStmt.all();
 
   return c.json({
     ok: true,
