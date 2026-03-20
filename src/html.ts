@@ -568,12 +568,13 @@ export function leaderboardPage(
 
   // Time filter tabs (Daily / Weekly / Monthly)
   const timeViews = (['daily', 'weekly', 'monthly'] as ViewType[]);
+  const currentDateParam = dateRange ? `&date=${dateRange.startDate}` : '';
   const timeTabsHtml = [
     `<a href="/leaderboard?sort=${sort}${platformParam}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${!view ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">All Time</a>`,
     ...timeViews.map(v => {
       const isActive = v === view;
       const label = v.charAt(0).toUpperCase() + v.slice(1);
-      return `<a href="/leaderboard?sort=${sort}&view=${v}${platformParam}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
+      return `<a href="/leaderboard?sort=${sort}&view=${v}${currentDateParam}${platformParam}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
     })
   ].join('');
 
