@@ -57,7 +57,7 @@ export default function LoginPage() {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white">TeamEval</h1>
+          <h1 className="text-2xl font-bold text-white">AIRank</h1>
           <p className="mt-2 text-sm text-gray-400">
             Sign in to your account
           </p>

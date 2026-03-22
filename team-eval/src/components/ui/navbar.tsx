@@ -34,7 +34,7 @@ export function Navbar() {
           {/* Logo */}
           <div className="flex items-center gap-8">
             <Link href="/" className="text-xl font-bold text-primary">
-              TeamEval
+              AIRank
             </Link>
 
             {/* Desktop nav links */}

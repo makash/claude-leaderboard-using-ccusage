@@ -55,7 +55,7 @@ export default function AddMembersPage() {
   };
 
   const copyCredentials = (member: CreatedMember) => {
-    const text = `TeamEval Login Credentials\nName: ${member.name}\nEmail: ${member.email}\nPassword: ${member.temporaryPassword}\nRole: ${member.role}\n\nPlease sign in and change your password in Settings.`;
+    const text = `AIRank Login Credentials\nName: ${member.name}\nEmail: ${member.email}\nPassword: ${member.temporaryPassword}\nRole: ${member.role}\n\nPlease sign in and change your password in Settings.`;
     navigator.clipboard.writeText(text);
     setCopied(member.email);
     setTimeout(() => setCopied(null), 2000);

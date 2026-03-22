@@ -1,5 +1,5 @@
 {
-  "name": "team-eval",
+  "name": "airank",
   "version": "0.1.0",
   "private": true,
   "description": "Team evaluation platform for tracking Claude and Codex AI usage within companies",

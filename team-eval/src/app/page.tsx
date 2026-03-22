@@ -163,7 +163,7 @@ export default function HomePage() {
       <section className="border-t border-gray-800">
         <div className="mx-auto max-w-4xl px-6 py-16 text-center">
           <p className="text-sm text-gray-600">
-            &copy; {new Date().getFullYear()} TeamEval. All rights reserved.
+            &copy; {new Date().getFullYear()} AIRank. All rights reserved.
           </p>
         </div>
       </section>

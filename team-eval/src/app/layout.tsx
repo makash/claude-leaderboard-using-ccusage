@@ -6,7 +6,7 @@ import { Providers } from "@/components/providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TeamEval - AI Usage Analytics & Team Evaluation",
+  title: "AIRank - AI Usage Analytics & Team Evaluation",
   description: "Track and evaluate your team's Claude and Codex AI usage",
 };
 
