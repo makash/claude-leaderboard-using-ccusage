@@ -1050,12 +1050,12 @@ app.post('/api/upload', async (c) => {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id, date, source) DO UPDATE SET
        upload_id = excluded.upload_id,
-       input_tokens = excluded.input_tokens,
-       output_tokens = excluded.output_tokens,
-       cache_creation_tokens = excluded.cache_creation_tokens,
-       cache_read_tokens = excluded.cache_read_tokens,
-       total_tokens = excluded.total_tokens,
-       cost_usd = excluded.cost_usd,
+       input_tokens = MAX(excluded.input_tokens, daily_usage.input_tokens),
+       output_tokens = MAX(excluded.output_tokens, daily_usage.output_tokens),
+       cache_creation_tokens = MAX(excluded.cache_creation_tokens, daily_usage.cache_creation_tokens),
+       cache_read_tokens = MAX(excluded.cache_read_tokens, daily_usage.cache_read_tokens),
+       total_tokens = MAX(excluded.total_tokens, daily_usage.total_tokens),
+       cost_usd = MAX(excluded.cost_usd, daily_usage.cost_usd),
        models_used = excluded.models_used`
   );
 
