@@ -111,19 +111,37 @@ func main() {
 
 	fmt.Println("Upload complete")
 
+	// Upload Claude Code usage (ccusage)
+	fmt.Println("Checking Claude Code usage...")
 	report, err := runCcusage()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "ccusage failed:", err.Error())
+		fmt.Fprintln(os.Stderr, "  Claude Code: skipped -", err.Error())
+	} else {
+		err = uploadCcusage(*urlFlag, *tokenFlag, report, machine, "claude")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "  Claude Code: upload failed -", err.Error())
+		} else {
+			fmt.Println("  Claude Code: upload complete")
+		}
+	}
+
+	// Upload Codex CLI usage (@ccusage/codex)
+	fmt.Println("Checking Codex CLI usage...")
+	codexReport, codexErr := runCcusageCodex()
+	if codexErr != nil {
+		fmt.Fprintln(os.Stderr, "  Codex CLI: skipped -", codexErr.Error())
+	} else {
+		codexErr = uploadCcusage(*urlFlag, *tokenFlag, codexReport, machine, "codex")
+		if codexErr != nil {
+			fmt.Fprintln(os.Stderr, "  Codex CLI: upload failed -", codexErr.Error())
+		} else {
+			fmt.Println("  Codex CLI: upload complete")
+		}
+	}
+
+	if err != nil && codexErr != nil {
 		printCcusageHelp()
-		printSummary(summary, *jsonSummary)
-		return
 	}
-	err = uploadCcusage(*urlFlag, *tokenFlag, report, machine)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "ccusage upload failed:", err.Error())
-		os.Exit(1)
-	}
-	fmt.Println("ccusage upload complete")
 
 	printSummary(summary, *jsonSummary)
 }
@@ -246,19 +264,29 @@ func runCcusage() (string, error) {
 	cmd := exec.Command("npx", "ccusage@latest", "daily", "--json")
 	out, err := cmd.Output()
 	if err != nil {
-		return "", errors.New("failed to run `npx ccusage@latest daily --json` (is Node installed?)")
+		return "", errors.New("no Claude Code usage data found (is Node installed?)")
+	}
+	return string(out), nil
+}
+
+func runCcusageCodex() (string, error) {
+	cmd := exec.Command("npx", "@ccusage/codex@latest", "daily", "--json")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", errors.New("no Codex CLI usage data found")
 	}
 	return string(out), nil
 }
 
 func printCcusageHelp() {
-	fmt.Fprintln(os.Stderr, "To enable ccusage uploads:")
+	fmt.Fprintln(os.Stderr, "To enable usage uploads:")
 	fmt.Fprintln(os.Stderr, "  1) Install mise: https://mise.jdx.dev")
 	fmt.Fprintln(os.Stderr, "  2) From a repo folder, run:")
-	fmt.Fprintln(os.Stderr, "     npx ccusage@latest daily --json")
+	fmt.Fprintln(os.Stderr, "     Claude Code: npx ccusage@latest daily --json")
+	fmt.Fprintln(os.Stderr, "     Codex CLI:   npx @ccusage/codex@latest daily --json")
 }
 
-func uploadCcusage(baseURL, token, report, machine string) error {
+func uploadCcusage(baseURL, token, report, machine, platform string) error {
 	baseURL = strings.TrimRight(baseURL, "/")
 	endpoint := baseURL + "/api/upload"
 
@@ -267,8 +295,9 @@ func uploadCcusage(baseURL, token, report, machine string) error {
 		source = "default"
 	}
 	payload := map[string]any{
-		"json":   report,
-		"source": source,
+		"json":     report,
+		"source":   source,
+		"platform": platform,
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -643,7 +672,7 @@ func gitRemoteURL(repoPath string) string {
 }
 
 func printOnboardingMessage() {
-	fmt.Println("Welcome to ccrank git uploads.")
+	fmt.Println("Welcome to ccrank — track your Claude Code & Codex CLI usage.")
 	fmt.Println("We created ~/.ccrank/repos.json to store the repos you want to upload.")
 	fmt.Println("")
 	fmt.Println("To add a single repo, run this inside a project folder:")
@@ -652,5 +681,6 @@ func printOnboardingMessage() {
 	fmt.Println("To add many repos at once, run this in a folder like ~/code:")
 	fmt.Println("  ccrank-git --add-repo")
 	fmt.Println("It will scan recursively and add the 30 most recently active repos.")
-	fmt.Println("Note: ccrank currently supports up to 30 repos.")
+	fmt.Println("")
+	fmt.Println("Usage data from both Claude Code and Codex CLI is uploaded automatically.")
 }

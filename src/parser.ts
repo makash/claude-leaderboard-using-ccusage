@@ -1,14 +1,19 @@
 /**
  * ccusage JSON report parser
  *
- * Handles multiple report formats from ccusage:
+ * Handles multiple report formats from ccusage and @ccusage/codex:
  * - daily: { type: "daily", data: [...], summary: {...} }
  * - weekly: { type: "weekly", data: [...], summary: {...} }
  * - session: { type: "session", data: [...], summary: {...} }
  *
  * Also handles older formats where field names differ
  * (e.g., totalCost vs costUSD vs totalCostUSD)
+ *
+ * Works with both Claude Code (ccusage) and OpenAI Codex CLI (@ccusage/codex)
+ * as they share the same JSON output format.
  */
+
+export type Platform = 'claude' | 'codex';
 
 export interface DailyEntry {
   date: string;
@@ -19,11 +24,13 @@ export interface DailyEntry {
   totalTokens: number;
   costUsd: number;
   modelsUsed: string[];
+  platform: Platform;
 }
 
 export interface ParsedReport {
   type: 'daily' | 'weekly' | 'session';
   entries: DailyEntry[];
+  platform: Platform;
   summary: {
     totalInputTokens: number;
     totalOutputTokens: number;
@@ -63,6 +70,17 @@ function num(val: unknown): number {
   return typeof val === 'number' ? val : 0;
 }
 
+export function detectPlatform(models: string[]): Platform {
+  const codexPrefixes = ['gpt-', 'codex-', 'o1-', 'o3-', 'o4-'];
+  const codexContains = ['codex', 'openai'];
+  for (const model of models) {
+    const lower = model.toLowerCase();
+    if (codexPrefixes.some(p => lower.startsWith(p))) return 'codex';
+    if (codexContains.some(p => lower.includes(p))) return 'codex';
+  }
+  return 'claude';
+}
+
 function normalizeDate(dateStr: string, type: string, index: number): string {
   // For daily reports, the date should already be YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
@@ -78,6 +96,7 @@ function normalizeDate(dateStr: string, type: string, index: number): string {
 
 function parseDataEntry(entry: Record<string, unknown>, type: string, index: number): DailyEntry {
   const dateField = entry.date || entry.week || entry.month || entry.sessionId || `${type}-${index}`;
+  const models = extractModels(entry);
   return {
     date: normalizeDate(String(dateField), type, index),
     inputTokens: num(entry.inputTokens),
@@ -86,7 +105,8 @@ function parseDataEntry(entry: Record<string, unknown>, type: string, index: num
     cacheReadTokens: num(entry.cacheReadTokens),
     totalTokens: num(entry.totalTokens),
     costUsd: extractCost(entry),
-    modelsUsed: extractModels(entry),
+    modelsUsed: models,
+    platform: detectPlatform(models),
   };
 }
 
@@ -106,11 +126,11 @@ export function parseReport(jsonStr: string): ParsedReport {
   try {
     data = JSON.parse(jsonStr);
   } catch {
-    throw new Error('Invalid JSON. Please paste the output of `npx ccusage@latest daily --json`.');
+    throw new Error('Invalid JSON. Please paste the output of `npx ccusage@latest daily --json` or `npx @ccusage/codex@latest daily --json`.');
   }
 
   if (!data || typeof data !== 'object') {
-    throw new Error('Expected a JSON object. Please paste the output of `npx ccusage@latest daily --json`.');
+    throw new Error('Expected a JSON object. Please paste the output of `npx ccusage@latest daily --json` or `npx @ccusage/codex@latest daily --json`.');
   }
 
   const report = data as Record<string, unknown>;
@@ -188,8 +208,11 @@ export function parseReport(jsonStr: string): ParsedReport {
         byDate.set(lastActivity, parsed);
       }
     }
-    return { type, entries: Array.from(byDate.values()), summary };
+    const sessionEntries = Array.from(byDate.values());
+    const reportPlatform = detectPlatform(sessionEntries.flatMap(e => e.modelsUsed));
+    return { type, entries: sessionEntries, platform: reportPlatform, summary };
   }
 
-  return { type, entries: parsedEntries, summary };
+  const reportPlatform = detectPlatform(parsedEntries.flatMap(e => e.modelsUsed));
+  return { type, entries: parsedEntries, platform: reportPlatform, summary };
 }

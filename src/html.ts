@@ -113,9 +113,9 @@ function layout(title: string, content: string, user: User | null = null, ogOver
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)} | ccrank.dev</title>
   <meta name="author" content="Akash Mahajan">
-  <meta name="description" content="Install the ccrank CLI to track your Claude Code usage and see where you rank.">
+  <meta name="description" content="Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.">
   <meta property="og:title" content="${escapeHtml(title)} | ccrank.dev">
-  <meta property="og:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Install the ccrank CLI to track your Claude Code usage and see where you rank.'}">
+  <meta property="og:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.'}">
   <meta property="og:type" content="website">
   <meta property="og:image" content="${ogOverrides?.image || 'https://imgs.kloudle.com/kloudle-customer-logos/ccrank-dev/ccrank-open-graph-image.webp'}">
   <meta property="og:image:width" content="1200">
@@ -123,7 +123,7 @@ function layout(title: string, content: string, user: User | null = null, ogOver
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:creator" content="@makash">
   <meta name="twitter:title" content="${escapeHtml(title)} | ccrank.dev">
-  <meta name="twitter:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Install the ccrank CLI to track your Claude Code usage and see where you rank.'}">
+  <meta name="twitter:description" content="${ogOverrides?.description ? escapeHtml(ogOverrides.description) : 'Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.'}">
   <meta name="twitter:image" content="${ogOverrides?.image || 'https://imgs.kloudle.com/kloudle-customer-logos/ccrank-dev/ccrank-open-graph-image.webp'}">
   <meta property="og:site_name" content="ccrank.dev">
   <meta property="og:url" content="https://ccrank.dev/">
@@ -133,8 +133,8 @@ function layout(title: string, content: string, user: User | null = null, ogOver
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "Claude Leaderboard",
-    "description": "Install the ccrank CLI to track your Claude Code usage and see where you rank.",
+    "name": "Claude & Codex Leaderboard",
+    "description": "Install the ccrank CLI to track your Claude Code & Codex CLI usage and see where you rank.",
     "url": "https://ccrank.dev/",
     "applicationCategory": "DeveloperApplication",
     "creator": {
@@ -287,7 +287,7 @@ export function landingPage(topEntries: LeaderboardEntry[]): string {
           ccrank.dev
         </h1>
         <p class="text-xl text-gray-400 max-w-lg mx-auto leading-relaxed">
-          Track Claude usage. Benchmark your leverage.
+          Track Claude & Codex usage. Benchmark your leverage.
         </p>
         <p class="text-xs text-gray-500 mt-2">by <a href="https://x.com/makash?utm_source=ccrank&utm_medium=web&utm_campaign=hero" target="_blank" rel="noopener" class="text-gray-400 hover:text-gray-300 transition">@makash</a></p>
       </div>
@@ -392,7 +392,7 @@ export function loginPage(): string {
   );
 }
 
-export function dashboardPage(user: User, stats: { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number; rank: number; upload_count: number }): string {
+export function dashboardPage(user: User, stats: { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number; rank: number; upload_count: number; platformBreakdown?: Record<string, { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number }> }): string {
   const title = getTitle(stats.total_cost);
   return layout(
     'Dashboard',
@@ -423,6 +423,38 @@ export function dashboardPage(user: User, stats: { total_cost: number; total_tok
       </div>
     </div>
 
+    ${(() => {
+      const pb = stats.platformBreakdown;
+      if (!pb || Object.keys(pb).length <= 1) return '';
+      const claude = pb['claude'];
+      const codex = pb['codex'];
+      if (!claude && !codex) return '';
+      return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        ${claude ? `<div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+            <span class="text-sm font-medium text-purple-300">Claude Code</span>
+          </div>
+          <div class="flex gap-6">
+            <div><div class="text-xs text-gray-500">Cost</div><div class="text-lg font-bold text-purple-400">${formatCost(claude.total_cost)}</div></div>
+            <div><div class="text-xs text-gray-500">Tokens</div><div class="text-lg font-bold text-cyan-400">${formatTokens(claude.total_tokens)}</div></div>
+            <div><div class="text-xs text-gray-500">Days</div><div class="text-lg font-bold text-yellow-400">${claude.days_active}</div></div>
+          </div>
+        </div>` : ''}
+        ${codex ? `<div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-sm font-medium text-emerald-300">Codex CLI</span>
+          </div>
+          <div class="flex gap-6">
+            <div><div class="text-xs text-gray-500">Cost</div><div class="text-lg font-bold text-purple-400">${formatCost(codex.total_cost)}</div></div>
+            <div><div class="text-xs text-gray-500">Tokens</div><div class="text-lg font-bold text-cyan-400">${formatTokens(codex.total_tokens)}</div></div>
+            <div><div class="text-xs text-gray-500">Days</div><div class="text-lg font-bold text-yellow-400">${codex.days_active}</div></div>
+          </div>
+        </div>` : ''}
+      </div>`;
+    })()}
+
     <div class="flex gap-4 mb-8">
       <a href="/upload" class="bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg px-6 py-3 transition">
         Install CLI
@@ -436,7 +468,7 @@ export function dashboardPage(user: User, stats: { total_cost: number; total_tok
     ${user.invites_remaining > 0 ? `
     <div class="bg-purple-900/20 border border-purple-800/30 rounded-xl p-5 flex items-center justify-between">
       <div>
-        <p class="text-sm font-medium text-gray-200">Know someone who uses Claude Code?</p>
+        <p class="text-sm font-medium text-gray-200">Know someone who uses Claude Code or Codex?</p>
         <p class="text-xs text-gray-400 mt-1">You have <span class="text-purple-400 font-semibold">${user.invites_remaining} invite${user.invites_remaining > 1 ? 's' : ''}</span> to share. The leaderboard is more fun with friends.</p>
       </div>
       <a href="/invites" class="flex-shrink-0 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition ml-4">
@@ -449,7 +481,7 @@ export function dashboardPage(user: User, stats: { total_cost: number; total_tok
     <div class="bg-cyan-900/20 border border-cyan-800/30 rounded-xl p-5 flex items-center justify-between mt-4">
       <div>
         <p class="text-sm font-medium text-gray-200">Share your stats card</p>
-        <p class="text-xs text-gray-400 mt-1">Show off your Claude Code usage on Twitter/LinkedIn</p>
+        <p class="text-xs text-gray-400 mt-1">Show off your usage stats on Twitter/LinkedIn</p>
       </div>
       <a href="/card/${escapeHtml(user.share_slug)}" class="flex-shrink-0 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition ml-4">
         View Card
@@ -473,7 +505,8 @@ export function leaderboardPage(
   user: User | null = null,
   sort: string = 'cost',
   view: ViewType | null = null,
-  dateRange: DateRange | null = null
+  dateRange: DateRange | null = null,
+  platform: string | null = null
 ): string {
   const isEfficiencySort = sort !== 'cost' && sort !== 'tokens';
 
@@ -496,7 +529,11 @@ export function leaderboardPage(
               <div class="font-medium">${e.share_slug
                 ? `<a href="${profileHref}" class="hover:text-purple-400 transition">${escapeHtml(e.display_name)}</a>`
                 : escapeHtml(e.display_name)}</div>
-              <div class="text-xs" style="color:${title.color}">${title.label}</div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs" style="color:${title.color}">${title.label}</span>
+                ${(e.platforms || []).includes('claude') ? '<span class="w-1.5 h-1.5 rounded-full bg-purple-400" title="Claude Code"></span>' : ''}
+                ${(e.platforms || []).includes('codex') ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Codex CLI"></span>' : ''}
+              </div>
             </div>
           </div>
         </td>
@@ -519,29 +556,44 @@ export function leaderboardPage(
     { key: 'output_ratio', label: 'Output Ratio' },
   ];
 
-  // Build sort tab URLs preserving view and date params
+  // Build shared URL params
+  const platformParam = platform ? `&platform=${platform}` : '';
   const viewParams = view ? `&view=${view}${dateRange ? `&date=${dateRange.startDate}` : ''}` : '';
+
+  // Sort tabs
   const tabsHtml = sortOptions.map(s => {
     const isActive = s.key === sort;
-    return `<a href="/leaderboard?sort=${s.key}${viewParams}" class="px-4 py-2 text-sm font-medium rounded-lg transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${s.label}</a>`;
+    return `<a href="/leaderboard?sort=${s.key}${viewParams}${platformParam}" class="px-4 py-2 text-sm font-medium rounded-lg transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${s.label}</a>`;
   }).join('');
 
   // Time filter tabs (Daily / Weekly / Monthly)
   const timeViews = (['daily', 'weekly', 'monthly'] as ViewType[]);
+  const currentDateParam = dateRange ? `&date=${dateRange.startDate}` : '';
   const timeTabsHtml = [
-    `<a href="/leaderboard?sort=${sort}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${!view ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">All Time</a>`,
+    `<a href="/leaderboard?sort=${sort}${platformParam}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${!view ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">All Time</a>`,
     ...timeViews.map(v => {
       const isActive = v === view;
       const label = v.charAt(0).toUpperCase() + v.slice(1);
-      return `<a href="/leaderboard?sort=${sort}&view=${v}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
+      return `<a href="/leaderboard?sort=${sort}&view=${v}${currentDateParam}${platformParam}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
     })
   ].join('');
+
+  // Platform filter tabs (All / Claude / Codex)
+  const platformTabsHtml = [
+    { key: null, label: 'All' },
+    { key: 'claude', label: 'Claude' },
+    { key: 'codex', label: 'Codex' },
+  ].map(p => {
+    const isActive = p.key === platform;
+    const href = p.key ? `/leaderboard?sort=${sort}${viewParams}&platform=${p.key}` : `/leaderboard?sort=${sort}${viewParams}`;
+    return `<a href="${href}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${p.label}</a>`;
+  }).join('');
 
   // Date navigation (only when a time view is active)
   let dateNavHtml = '';
   if (view && dateRange) {
-    const prevHref = `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.prevDate}`;
-    const nextHref = dateRange.isCurrentPeriod ? '#' : `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.nextDate}`;
+    const prevHref = `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.prevDate}${platformParam}`;
+    const nextHref = dateRange.isCurrentPeriod ? '#' : `/leaderboard?sort=${sort}&view=${view}&date=${dateRange.nextDate}${platformParam}`;
     const nextDisabled = dateRange.isCurrentPeriod;
     dateNavHtml = `<div class="flex items-center justify-between mb-6 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3">
       <a href="${prevHref}" class="text-gray-400 hover:text-white transition text-sm">&larr; Previous</a>
@@ -554,7 +606,7 @@ export function leaderboardPage(
   }
 
   const sortDescriptions: Record<string, string> = {
-    cost: 'Who\'s pushing Claude Code the hardest? Ranked by total spend.',
+    cost: 'Who\'s pushing Claude Code & Codex the hardest? Ranked by total spend.',
     tokens: 'Who\'s consuming the most tokens? Ranked by total token usage.',
     output_per_dollar: 'Who gets the most code written per dollar? Masters of prompting and task scoping.',
     cache_rate: 'Who reuses context best? High cache rates mean deep, focused work on consistent projects.',
@@ -575,8 +627,14 @@ export function leaderboardPage(
     </div>
 
     <!-- Time filter tabs -->
-    <div class="flex gap-2 mb-4">
-      ${timeTabsHtml}
+    <div class="flex items-center gap-4 mb-2 flex-wrap">
+      <div class="flex gap-2">${timeTabsHtml}</div>
+      <div class="h-4 w-px bg-gray-700"></div>
+      <div class="flex gap-2">${platformTabsHtml}</div>
+    </div>
+    <div class="flex items-center gap-3 mb-4 text-xs text-gray-600">
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span> Claude</span>
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Codex</span>
     </div>
 
     ${dateNavHtml}
@@ -713,15 +771,35 @@ export function uploadPage(user: User, message: { type: 'success' | 'error'; tex
         <p class="text-sm text-gray-400">Add <code class="bg-gray-800 px-1 rounded">--machine laptop</code> so each device stays separate.</p>
       </div>
 
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+        <h2 class="text-sm font-semibold text-gray-200 mb-2">Using OpenAI Codex CLI?</h2>
+        <p class="text-sm text-gray-400 mb-3">ccrank also supports Codex CLI usage data. Use <code class="bg-gray-800 px-1.5 py-0.5 rounded">@ccusage/codex</code> to generate your report:</p>
+        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">Command</span>
+            <button class="text-xs text-purple-300 hover:text-purple-200 transition" data-copy="npx @ccusage/codex@latest daily --json">Copy</button>
+          </div>
+          <code class="text-xs text-gray-300">npx @ccusage/codex@latest daily --json</code>
+        </div>
+        <p class="text-xs text-gray-500 mt-3">Same upload process &mdash; paste the JSON output or upload the file. Works with GPT-5, codex-mini, and all Codex models.</p>
+      </div>
+
       <div class="bg-gray-900/60 border border-gray-800/60 rounded-xl p-6">
         <h2 class="text-sm font-semibold text-gray-200 mb-2">Troubleshooting</h2>
         <p class="text-sm text-gray-400">No Node installed? We recommend <a href="https://mise.jdx.dev" target="_blank" rel="noopener" class="text-purple-300 hover:text-purple-200 transition">mise</a>. Then run:</p>
         <div class="bg-gray-950 border border-gray-800 rounded-lg p-3 mt-3">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs text-gray-500">Command</span>
+            <span class="text-xs text-gray-500">Claude Code</span>
             <button class="text-xs text-purple-300 hover:text-purple-200 transition" data-copy="npx ccusage@latest daily --json">Copy</button>
           </div>
           <code class="text-xs text-gray-300">npx ccusage@latest daily --json</code>
+        </div>
+        <div class="bg-gray-950 border border-gray-800 rounded-lg p-3 mt-2">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">Codex CLI</span>
+            <button class="text-xs text-purple-300 hover:text-purple-200 transition" data-copy="npx @ccusage/codex@latest daily --json">Copy</button>
+          </div>
+          <code class="text-xs text-gray-300">npx @ccusage/codex@latest daily --json</code>
         </div>
       </div>
     </div>
@@ -923,7 +1001,7 @@ export function aboutPage(user: User | null = null): string {
       <p class="text-gray-400 mb-10">How a WhatsApp message became a live leaderboard in minutes.</p>
 
       <p class="text-gray-400 mb-8 text-lg leading-relaxed">
-        ccrank.dev is an open-source developer ranking platform for Claude Code usage.
+        ccrank.dev is an open-source developer ranking platform for Claude Code & Codex CLI usage.
         Track, compare, and compete on your team's AI-assisted development metrics.
       </p>
 
@@ -971,9 +1049,9 @@ export function aboutPage(user: User | null = null): string {
       <section class="mb-10">
         <h2 class="text-xl font-bold mb-4 text-yellow-400">What This Leaderboard Is For</h2>
         <ul class="text-gray-300 space-y-2">
-          <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Track your Claude Code usage across days and weeks</li>
+          <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Track your Claude Code & Codex CLI usage across days and weeks</li>
           <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Friendly competition &mdash; who&rsquo;s the biggest Claude power user?</li>
-          <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Cost awareness &mdash; see what Claude Code actually costs</li>
+          <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Cost awareness &mdash; see what Claude Code & Codex actually costs</li>
           <li class="flex items-start gap-2"><span class="text-purple-400 mt-1">&#x2022;</span> Fun titles &mdash; from Apprentice to Claude Maximalist</li>
         </ul>
       </section>
@@ -1005,7 +1083,7 @@ export function aboutPage(user: User | null = null): string {
             <div class="text-sm font-semibold text-white mb-1">Powered by ccusage</div>
             <p class="text-sm text-gray-400">
               <a href="https://github.com/ryoppippi/ccusage?utm_source=claude-leaderboard&utm_medium=web&utm_campaign=about" target="_blank" rel="noopener" class="text-purple-400 hover:text-purple-300 transition">ccusage</a>
-              by <strong class="text-gray-300">ryoppippi</strong> &mdash; the CLI tool that makes Claude Code usage tracking possible.
+              by <strong class="text-gray-300">ryoppippi</strong> &mdash; the CLI tool that makes Claude Code & Codex usage tracking possible.
               Without it, there&rsquo;d be no data to leaderboard.
             </p>
           </div>
@@ -1039,13 +1117,26 @@ export function historyPage(
   view: ViewType,
   dateRange: DateRange,
   entries: LeaderboardEntry[],
-  user: User | null = null
+  user: User | null = null,
+  platform: string | null = null
 ): string {
+  const histPlatformParam = platform ? `&platform=${platform}` : '';
   const tabs = (['daily', 'weekly', 'monthly'] as ViewType[]).map(v => {
     const isActive = v === view;
     const label = v.charAt(0).toUpperCase() + v.slice(1);
-    const href = `/history?view=${v}`;
+    const href = `/history?view=${v}${histPlatformParam}`;
     return `<a href="${href}" class="px-4 py-2 text-sm font-medium rounded-lg transition ${isActive ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${label}</a>`;
+  }).join('');
+
+  // Platform filter tabs
+  const histPlatformTabs = [
+    { key: null, label: 'All' },
+    { key: 'claude', label: 'Claude' },
+    { key: 'codex', label: 'Codex' },
+  ].map(p => {
+    const isActive = p.key === platform;
+    const href = p.key ? `/history?view=${view}&platform=${p.key}` : `/history?view=${view}`;
+    return `<a href="${href}" class="px-3 py-1.5 text-xs font-medium rounded-md transition ${isActive ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">${p.label}</a>`;
   }).join('');
 
   const rows = entries.length > 0
@@ -1076,8 +1167,8 @@ export function historyPage(
       }).join('')
     : '';
 
-  const prevHref = `/history?view=${view}&date=${dateRange.prevDate}`;
-  const nextHref = dateRange.isCurrentPeriod ? '#' : `/history?view=${view}&date=${dateRange.nextDate}`;
+  const prevHref = `/history?view=${view}&date=${dateRange.prevDate}${histPlatformParam}`;
+  const nextHref = dateRange.isCurrentPeriod ? '#' : `/history?view=${view}&date=${dateRange.nextDate}${histPlatformParam}`;
   const nextDisabled = dateRange.isCurrentPeriod;
 
   return layout(
@@ -1089,8 +1180,10 @@ export function historyPage(
       </div>
 
       <!-- Tabs -->
-      <div class="flex gap-2 mb-6">
-        ${tabs}
+      <div class="flex items-center gap-4 mb-6 flex-wrap">
+        <div class="flex gap-2">${tabs}</div>
+        <div class="h-4 w-px bg-gray-700"></div>
+        <div class="flex gap-2">${histPlatformTabs}</div>
       </div>
 
       <!-- Date navigation -->
@@ -1140,7 +1233,7 @@ export function cardPage(
   const rankColor = stats.rank === 1 ? '#eab308' : stats.rank === 2 ? '#9ca3af' : stats.rank === 3 ? '#b45309' : '#7c3aed';
   const cardUrl = `https://ccrank.dev/card/${escapeHtml(cardUser.share_slug)}`;
   const imageUrl = `https://ccrank.dev/card/${escapeHtml(cardUser.share_slug)}/image.png`;
-  const tweetText = encodeURIComponent(`I'm ranked ${rankLabel} on the Claude Code Leaderboard with ${formatCost(stats.total_cost)} spent! Check your ranking at ccrank.dev`);
+  const tweetText = encodeURIComponent(`I'm ranked ${rankLabel} on the ccrank.dev Leaderboard with ${formatCost(stats.total_cost)} spent! Check your ranking at ccrank.dev`);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1148,16 +1241,16 @@ export function cardPage(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(cardUser.display_name)}'s Claude Stats - ccrank.dev</title>
-  <meta property="og:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code Leaderboard | ccrank.dev">
-  <meta property="og:description" content="${title.label} with ${formatCost(stats.total_cost)} spent on Claude Code. ${stats.days_active} days active. ccrank.dev is the leaderboard for Claude Code power users.">
+  <meta property="og:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code & Codex Leaderboard | ccrank.dev">
+  <meta property="og:description" content="${title.label} with ${formatCost(stats.total_cost)} spent on AI coding tools. ${stats.days_active} days active. ccrank.dev is the leaderboard for AI coding power users.">
   <meta property="og:image" content="${imageUrl}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:url" content="${cardUrl}">
   <meta property="og:type" content="profile">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code Leaderboard | ccrank.dev">
-  <meta name="twitter:description" content="${title.label} with ${formatCost(stats.total_cost)} spent. ${stats.days_active} days active. ccrank.dev is the leaderboard for Claude Code power users.">
+  <meta name="twitter:title" content="${escapeHtml(cardUser.display_name)} - ${rankLabel} on the Claude Code & Codex Leaderboard | ccrank.dev">
+  <meta name="twitter:description" content="${title.label} with ${formatCost(stats.total_cost)} spent. ${stats.days_active} days active. ccrank.dev is the leaderboard for AI coding power users.">
   <meta name="twitter:image" content="${imageUrl}">
   <meta name="twitter:creator" content="@makash">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -1193,7 +1286,7 @@ export function cardPage(
       <!-- Main stat -->
       <div class="mb-6">
         <div class="text-5xl font-bold text-purple-400">${formatCost(stats.total_cost)}</div>
-        <div class="text-sm text-gray-500 mt-1">total spent on Claude Code</div>
+        <div class="text-sm text-gray-500 mt-1">total spent on AI coding tools</div>
       </div>
 
       <!-- Stats grid -->
@@ -1220,7 +1313,7 @@ export function cardPage(
     <!-- Footer -->
     <div class="px-8 py-4 bg-gray-800/50 border-t border-gray-800 flex items-center justify-between">
       <span class="text-sm text-gray-400">ccrank.dev</span>
-      <span class="text-xs text-gray-600">Claude Code Leaderboard</span>
+      <span class="text-xs text-gray-600">Claude Code & Codex Leaderboard</span>
     </div>
   </div>
 
@@ -1254,7 +1347,7 @@ export function cardPage(
 
   <!-- CTA for viewers -->
   <div class="mt-8 text-center">
-    <p class="text-sm text-gray-500 mb-2">Track your own Claude Code usage</p>
+    <p class="text-sm text-gray-500 mb-2">Track your own Claude Code & Codex usage</p>
     <a href="/" class="text-purple-400 hover:text-purple-300 font-medium transition">Join at ccrank.dev</a>
   </div>
 
@@ -1343,7 +1436,7 @@ export function settingsPage(
       <!-- Sharing Section -->
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
         <h2 class="text-lg font-semibold mb-4">Social Stats Card</h2>
-        <p class="text-sm text-gray-400 mb-4">Share your Claude Code usage ranking as a beautiful card on Twitter/LinkedIn.</p>
+        <p class="text-sm text-gray-400 mb-4">Share your usage ranking as a beautiful card on Twitter/LinkedIn.</p>
 
         <form id="sharing-form" class="space-y-4">
           <div class="flex items-center justify-between">
@@ -1389,7 +1482,7 @@ export function settingsPage(
       <!-- Favorite Tools Section -->
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
         <h2 class="text-lg font-semibold mb-2">Favorite Tools</h2>
-        <p class="text-sm text-gray-400 mb-4">What are the Claude Code plugins or skills you can't live without? (shown on your profile)</p>
+        <p class="text-sm text-gray-400 mb-4">What are the AI coding tools or plugins you can't live without? (shown on your profile)</p>
         <div class="space-y-3">
           <input type="text" id="fav-tool-1" value="${escapeHtml(favTools[0] || '')}"
             placeholder="e.g. playwright MCP"
@@ -1722,6 +1815,7 @@ export function profilePage(
     cache_rate: number;
     output_ratio: number;
     meets_efficiency_threshold: boolean;
+    platformBreakdown?: Record<string, { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number; last_active: string | null }>;
   },
   favTools: string[],
   heatmapData: { date: string; cost: number; tokens: number; sessions: number }[],
@@ -1777,7 +1871,7 @@ export function profilePage(
   if (stats.total_tokens > 0) {
     let tweetText = `I'm ranked #${stats.rank} on ccrank.dev!`;
     if (favTools.length > 0) {
-      tweetText += '\n\nMy go-to Claude Code tools:';
+      tweetText += '\n\nMy go-to AI coding tools:';
       favTools.forEach(t => { tweetText += `\n- ${t}`; });
     }
     tweetText += `\n\nCheck your ranking: ccrank.dev/card/${profileUser.share_slug}`;
@@ -1841,7 +1935,7 @@ export function profilePage(
           ${gitTrend}
         </div>
         <div>
-          <div class="text-xs text-gray-400 mb-2">Claude usage (tokens)</div>
+          <div class="text-xs text-gray-400 mb-2">AI usage (tokens)</div>
           ${usageTrend}
         </div>
       </div>
@@ -1911,6 +2005,68 @@ export function profilePage(
         <div class="text-xl font-bold text-amber-400">${formatPercent(stats.output_ratio)}</div>
       </div>
     </div>` : ''}
+
+    <!-- Platform Breakdown -->
+    ${(() => {
+      const pb = stats.platformBreakdown;
+      if (!pb || Object.keys(pb).length <= 1) return '';
+      const claude = pb['claude'];
+      const codex = pb['codex'];
+      if (!claude && !codex) return '';
+      return `<div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8">
+        <h2 class="text-lg font-semibold mb-4">Platform Breakdown</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          ${claude ? `<div class="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+              <span class="text-sm font-semibold text-purple-300">Claude Code</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              ${isOwner ? `<div>
+                <div class="text-xs text-gray-500">Cost</div>
+                <div class="text-lg font-bold text-purple-400">${formatCost(claude.total_cost)}</div>
+              </div>` : ''}
+              <div>
+                <div class="text-xs text-gray-500">Tokens</div>
+                <div class="text-lg font-bold text-cyan-400">${formatTokens(claude.total_tokens)}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">Output</div>
+                <div class="text-lg font-bold text-green-400">${formatTokens(claude.total_output_tokens)}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">Days</div>
+                <div class="text-lg font-bold text-yellow-400">${claude.days_active}</div>
+              </div>
+            </div>
+          </div>` : ''}
+          ${codex ? `<div class="bg-gray-800/60 border border-gray-700 rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span class="text-sm font-semibold text-emerald-300">Codex CLI</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              ${isOwner ? `<div>
+                <div class="text-xs text-gray-500">Cost</div>
+                <div class="text-lg font-bold text-purple-400">${formatCost(codex.total_cost)}</div>
+              </div>` : ''}
+              <div>
+                <div class="text-xs text-gray-500">Tokens</div>
+                <div class="text-lg font-bold text-cyan-400">${formatTokens(codex.total_tokens)}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">Output</div>
+                <div class="text-lg font-bold text-green-400">${formatTokens(codex.total_output_tokens)}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">Days</div>
+                <div class="text-lg font-bold text-yellow-400">${codex.days_active}</div>
+              </div>
+            </div>
+          </div>` : ''}
+        </div>
+      </div>`;
+    })()}
 
     ${gitHtml}
 
@@ -1985,7 +2141,7 @@ export function profilePage(
   })();
   </script>`;
 
-  const ogDesc = `${title.label} ranked #${stats.rank} on ccrank.dev. ${stats.days_active} days active, ${formatTokens(stats.total_tokens)} tokens. ccrank.dev is the leaderboard for Claude Code power users.`;
+  const ogDesc = `${title.label} ranked #${stats.rank} on ccrank.dev. ${stats.days_active} days active, ${formatTokens(stats.total_tokens)} tokens. ccrank.dev is the leaderboard for AI coding power users.`;
 
   const ogImage = `https://ccrank.dev/card/${profileUser.share_slug}/image.png`;
   return layout('Profile - ' + profileUser.display_name, content, viewer, { image: ogImage, description: ogDesc });

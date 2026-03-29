@@ -168,7 +168,18 @@ app.get('/history', async (c) => {
   const dateParam = c.req.query('date') || today;
   const dateStr = isValidDateString(dateParam) ? dateParam : today;
 
+  // Platform filter
+  const platformParam = c.req.query('platform') || '';
+  const historyPlatform: string | null = (platformParam === 'claude' || platformParam === 'codex') ? platformParam : null;
+
   const dateRange = getDateRange(view, dateStr);
+
+  const histBindings: (string)[] = [dateRange.startDate, dateRange.endDate];
+  let histPlatformSQL = '';
+  if (historyPlatform) {
+    histPlatformSQL = 'AND COALESCE(d.platform, ?) = ?';
+    histBindings.push('claude', historyPlatform);
+  }
 
   const results = await c.env.DB.prepare(
     `SELECT
@@ -182,13 +193,13 @@ app.get('/history', async (c) => {
       MAX(d.date) as last_active
     FROM users u
     JOIN daily_usage d ON u.id = d.user_id
-    WHERE d.date >= ? AND d.date <= ?
+    WHERE d.date >= ? AND d.date <= ? ${histPlatformSQL}
     GROUP BY u.id
     HAVING total_cost > 0
     ORDER BY total_cost DESC
     LIMIT 10`
   )
-    .bind(dateRange.startDate, dateRange.endDate)
+    .bind(...histBindings)
     .all();
 
   const entries = (results.results || []).map((row: any, i: number) => ({
@@ -203,7 +214,7 @@ app.get('/history', async (c) => {
     last_active: row.last_active,
   }));
 
-  return c.html(historyPage(view, dateRange, entries, user));
+  return c.html(historyPage(view, dateRange, entries, user, historyPlatform));
 });
 
 app.get('/login', (c) => {
@@ -276,6 +287,24 @@ app.get('/', async (c) => {
     .bind(user.id)
     .first();
 
+  // Platform breakdown for dashboard
+  const dashPlatformStats = await c.env.DB.prepare(
+    `SELECT COALESCE(platform, 'claude') as platform,
+     COALESCE(SUM(cost_usd), 0) as total_cost, COALESCE(SUM(total_tokens), 0) as total_tokens,
+     COALESCE(SUM(output_tokens), 0) as total_output_tokens, COUNT(DISTINCT date) as days_active
+     FROM daily_usage WHERE user_id = ? GROUP BY COALESCE(platform, 'claude')`
+  ).bind(user.id).all();
+
+  const dashPlatformBreakdown: Record<string, { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number }> = {};
+  for (const row of (dashPlatformStats.results || []) as any[]) {
+    dashPlatformBreakdown[row.platform] = {
+      total_cost: row.total_cost,
+      total_tokens: row.total_tokens,
+      total_output_tokens: row.total_output_tokens,
+      days_active: row.days_active,
+    };
+  }
+
   return c.html(
     dashboardPage(user, {
       total_cost: (stats as any)?.total_cost ?? 0,
@@ -284,6 +313,7 @@ app.get('/', async (c) => {
       days_active: (stats as any)?.days_active ?? 0,
       rank: (rankResult as any)?.rank ?? 0,
       upload_count: (uploadCount as any)?.cnt ?? 0,
+      platformBreakdown: dashPlatformBreakdown,
     })
   );
 });
@@ -297,16 +327,28 @@ app.get('/leaderboard', async (c) => {
   const viewParam = c.req.query('view') || '';
   const view: ViewType | null = isValidView(viewParam) ? viewParam : null;
 
+  // Platform filter (all / claude / codex)
+  const platformParam = c.req.query('platform') || '';
+  const platform: string | null = (platformParam === 'claude' || platformParam === 'codex') ? platformParam : null;
+
   let dateRange: ReturnType<typeof getDateRange> | null = null;
-  let dateBindings: string[] = [];
+  let lbBindings: string[] = [];
 
   if (view) {
     const today = new Date().toISOString().slice(0, 10);
     const dateParam = c.req.query('date') || today;
     const dateStr = isValidDateString(dateParam) ? dateParam : today;
     dateRange = getDateRange(view, dateStr);
-    dateBindings = [dateRange.startDate, dateRange.endDate];
+    lbBindings = [dateRange.startDate, dateRange.endDate];
   }
+
+  const whereClauses: string[] = [];
+  if (lbBindings.length > 0) whereClauses.push('d.date >= ? AND d.date <= ?');
+  if (platform) {
+    whereClauses.push('COALESCE(d.platform, ?) = ?');
+    lbBindings.push('claude', platform);
+  }
+  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
   const query = `SELECT
       u.display_name,
@@ -318,6 +360,7 @@ app.get('/leaderboard', async (c) => {
       COALESCE(SUM(d.cache_read_tokens), 0) as total_cache_read,
       COUNT(DISTINCT d.date) as days_active,
       MAX(d.date) as last_active,
+      GROUP_CONCAT(DISTINCT COALESCE(d.platform, 'claude')) as platforms,
       CASE WHEN COALESCE(SUM(d.cost_usd), 0) > 0
         THEN COALESCE(SUM(d.output_tokens), 0) / COALESCE(SUM(d.cost_usd), 1)
         ELSE 0 END as output_per_dollar,
@@ -329,14 +372,14 @@ app.get('/leaderboard', async (c) => {
         ELSE 0 END as output_ratio
     FROM users u
     JOIN daily_usage d ON u.id = d.user_id
-    ${dateBindings.length > 0 ? `WHERE d.date >= ? AND d.date <= ?` : ''}
+    ${whereSQL}
     GROUP BY u.id
     HAVING total_cost > 0
     ORDER BY total_cost DESC`;
 
   const stmt = c.env.DB.prepare(query);
-  const results = dateBindings.length > 0
-    ? await stmt.bind(...dateBindings).all()
+  const results = lbBindings.length > 0
+    ? await stmt.bind(...lbBindings).all()
     : await stmt.all();
 
   const allRows = (results.results || []).map((row: any) => ({
@@ -352,6 +395,7 @@ app.get('/leaderboard', async (c) => {
     cache_rate: row.cache_rate,
     output_ratio: row.output_ratio,
     meets_efficiency_threshold: row.total_cost >= 100 && row.days_active >= 10,
+    platforms: row.platforms ? String(row.platforms).split(',') : ['claude'],
   }));
 
   let entries;
@@ -370,7 +414,7 @@ app.get('/leaderboard', async (c) => {
     ];
   }
 
-  return c.html(leaderboardPage(entries, user, sort, view, dateRange));
+  return c.html(leaderboardPage(entries, user, sort, view, dateRange, platform));
 });
 
 app.get('/upload', (c) => {
@@ -540,6 +584,26 @@ app.get('/user/:slug', async (c) => {
     };
   })();
 
+  // Platform breakdown stats
+  const platformStats = await c.env.DB.prepare(
+    `SELECT COALESCE(platform, 'claude') as platform,
+     COALESCE(SUM(cost_usd), 0) as total_cost, COALESCE(SUM(total_tokens), 0) as total_tokens,
+     COALESCE(SUM(output_tokens), 0) as total_output_tokens, COALESCE(SUM(cache_read_tokens), 0) as total_cache_read,
+     COUNT(DISTINCT date) as days_active, MAX(date) as last_active
+     FROM daily_usage WHERE user_id = ? GROUP BY COALESCE(platform, 'claude')`
+  ).bind((profileUser as any).id).all();
+
+  const platformBreakdown: Record<string, { total_cost: number; total_tokens: number; total_output_tokens: number; days_active: number; last_active: string | null }> = {};
+  for (const row of (platformStats.results || []) as any[]) {
+    platformBreakdown[row.platform] = {
+      total_cost: row.total_cost,
+      total_tokens: row.total_tokens,
+      total_output_tokens: row.total_output_tokens,
+      days_active: row.days_active,
+      last_active: row.last_active,
+    };
+  }
+
   const totalCost = (stats as any)?.total_cost ?? 0;
   const totalTokens = (stats as any)?.total_tokens ?? 0;
   const totalOutputTokens = (stats as any)?.total_output_tokens ?? 0;
@@ -557,6 +621,7 @@ app.get('/user/:slug', async (c) => {
     cache_rate: totalTokens > 0 ? totalCacheRead / totalTokens : 0,
     output_ratio: (totalTokens - totalCacheRead) > 0 ? totalOutputTokens / (totalTokens - totalCacheRead) : 0,
     meets_efficiency_threshold: totalCost >= 100 && daysActive >= 10,
+    platformBreakdown,
   };
 
   const isSharingEnabled = (profileUser as any).sharing_enabled === 1;
@@ -1016,7 +1081,7 @@ app.post('/api/upload', async (c) => {
   const user = sessionUser || tokenUser;
   if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 
-  let body: { json: string; source?: string };
+  let body: { json: string; source?: string; platform?: string };
   try {
     body = await c.req.json();
   } catch {
@@ -1036,6 +1101,15 @@ app.post('/api/upload', async (c) => {
     return c.json({ ok: false, error: err.message }, 400);
   }
 
+  // Allow explicit platform override from CLI (e.g., ccrank-git sends platform)
+  const platformOverride = body.platform === 'codex' ? 'codex' : body.platform === 'claude' ? 'claude' : null;
+  if (platformOverride) {
+    report.platform = platformOverride;
+    for (const entry of report.entries) {
+      entry.platform = platformOverride;
+    }
+  }
+
   // Create upload record
   const uploadId = generateId();
   await c.env.DB.prepare(
@@ -1044,11 +1118,11 @@ app.post('/api/upload', async (c) => {
     .bind(uploadId, user.id, report.type, report.entries.length)
     .run();
 
-  // Upsert daily usage entries (source tracking for multi-machine support)
+  // Upsert daily usage entries (source + platform tracking)
   const stmt = c.env.DB.prepare(
-    `INSERT INTO daily_usage (id, upload_id, user_id, date, source, input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, total_tokens, cost_usd, models_used)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(user_id, date, source) DO UPDATE SET
+    `INSERT INTO daily_usage (id, upload_id, user_id, date, source, platform, input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, total_tokens, cost_usd, models_used)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, date, source, platform) DO UPDATE SET
        upload_id = excluded.upload_id,
        input_tokens = excluded.input_tokens,
        output_tokens = excluded.output_tokens,
@@ -1066,6 +1140,7 @@ app.post('/api/upload', async (c) => {
       user.id,
       entry.date,
       source,
+      entry.platform,
       entry.inputTokens,
       entry.outputTokens,
       entry.cacheCreationTokens,
@@ -1082,6 +1157,7 @@ app.post('/api/upload', async (c) => {
     ok: true,
     entries: report.entries.length,
     type: report.type,
+    platform: report.platform,
     summary: report.summary,
   });
 });
@@ -1227,7 +1303,17 @@ app.post('/api/git/feedback', async (c) => {
 });
 
 app.get('/api/leaderboard', async (c) => {
-  const results = await c.env.DB.prepare(
+  const platformFilter = c.req.query('platform');
+  const validPlatform = platformFilter === 'claude' || platformFilter === 'codex' ? platformFilter : null;
+
+  const apiLbBindings: string[] = [];
+  let apiPlatformSQL = '';
+  if (validPlatform) {
+    apiPlatformSQL = 'WHERE COALESCE(d.platform, ?) = ?';
+    apiLbBindings.push('claude', validPlatform);
+  }
+
+  const apiLbStmt = c.env.DB.prepare(
     `SELECT
       u.id,
       u.display_name,
@@ -1239,6 +1325,7 @@ app.get('/api/leaderboard', async (c) => {
       COALESCE(SUM(d.cache_read_tokens), 0) as total_cache_read,
       COUNT(DISTINCT d.date) as days_active,
       MAX(d.date) as last_active,
+      GROUP_CONCAT(DISTINCT COALESCE(d.platform, 'claude')) as platforms,
       CASE WHEN COALESCE(SUM(d.cost_usd), 0) > 0
         THEN COALESCE(SUM(d.output_tokens), 0) / COALESCE(SUM(d.cost_usd), 1)
         ELSE 0 END as output_per_dollar,
@@ -1250,10 +1337,15 @@ app.get('/api/leaderboard', async (c) => {
         ELSE 0 END as output_ratio
     FROM users u
     LEFT JOIN daily_usage d ON u.id = d.user_id
+    ${apiPlatformSQL}
     GROUP BY u.id
     HAVING total_cost > 0
     ORDER BY total_cost DESC`
-  ).all();
+  );
+
+  const results = apiLbBindings.length > 0
+    ? await apiLbStmt.bind(...apiLbBindings).all()
+    : await apiLbStmt.all();
 
   return c.json({
     ok: true,
@@ -1270,6 +1362,7 @@ app.get('/api/leaderboard', async (c) => {
       output_ratio: row.output_ratio,
       days_active: row.days_active,
       last_active: row.last_active,
+      platforms: row.platforms ? String(row.platforms).split(',') : ['claude'],
     })),
   });
 });
@@ -1289,6 +1382,24 @@ app.get('/api/me', async (c) => {
     .bind(user.id)
     .first();
 
+  // Platform breakdown
+  const mePlatformStats = await c.env.DB.prepare(
+    `SELECT COALESCE(platform, 'claude') as platform,
+     COALESCE(SUM(cost_usd), 0) as total_cost, COALESCE(SUM(total_tokens), 0) as total_tokens,
+     COALESCE(SUM(output_tokens), 0) as total_output_tokens, COUNT(DISTINCT date) as days_active
+     FROM daily_usage WHERE user_id = ? GROUP BY COALESCE(platform, 'claude')`
+  ).bind(user.id).all();
+
+  const mePlatformBreakdown: Record<string, any> = {};
+  for (const row of (mePlatformStats.results || []) as any[]) {
+    mePlatformBreakdown[row.platform] = {
+      total_cost: row.total_cost,
+      total_tokens: row.total_tokens,
+      total_output_tokens: row.total_output_tokens,
+      days_active: row.days_active,
+    };
+  }
+
   return c.json({
     ok: true,
     user: {
@@ -1297,6 +1408,7 @@ app.get('/api/me', async (c) => {
       avatar_url: user.avatar_url,
     },
     stats,
+    platformBreakdown: mePlatformBreakdown,
   });
 });
 
